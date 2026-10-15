@@ -1,0 +1,104 @@
+# -*- coding: utf-8 -*-
+#
+#  Copyright (C) 2026 ksooo
+#  This file is part of plugin.video.yt
+#
+#  SPDX-License-Identifier: GPL-2.0-or-later
+#  See LICENSE.txt for more information.
+#
+"""Tests for resources.lib.innertube."""
+
+import unittest
+from unittest import mock
+
+# Importing support installs the xbmc* stubs, so it has to come first.
+from tests.support import player_response
+
+from resources.lib import innertube
+
+BOT_CHECK = {
+    'playabilityStatus': {'status': 'LOGIN_REQUIRED',
+                          'reason': 'Sign in to confirm you are not a bot'},
+    'responseContext': {'visitorData': 'visitor-1'},
+}
+
+
+class PlayerTest(unittest.TestCase):
+
+    def setUp(self):
+        self.requests = []
+        # Responses by client name; a list is answered from front to back.
+        self.responses = {'ANDROID': player_response('abc'),
+                          'ANDROID_VR': player_response('abc')}
+        patcher = mock.patch.object(innertube.http, 'post_json', self._post_json)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _post_json(self, url, payload, headers):
+        self.requests.append((payload, headers))
+        response = self.responses[payload['context']['client']['clientName']]
+        return response.pop(0) if isinstance(response, list) else response
+
+    def clients_asked(self):
+        return [payload['context']['client']['clientName'] for payload, _ in self.requests]
+
+    def test_android_is_asked_first(self):
+        player = innertube.get_player('abc', 'de', 'DE')
+        self.assertEqual(self.clients_asked(), ['ANDROID'])
+        self.assertIs(player.client, innertube.ANDROID)
+        self.assertEqual(player.response, self.responses['ANDROID'])
+
+    def test_the_request_identifies_as_the_client(self):
+        innertube.get_player('abc', 'de', 'DE')
+        payload, headers = self.requests[0]
+        self.assertEqual(payload['videoId'], 'abc')
+        self.assertEqual(payload['params'], '2AMB')
+        self.assertEqual(headers['User-Agent'], innertube.ANDROID.stream_headers['User-Agent'])
+        self.assertEqual(headers['X-YouTube-Client-Name'], '3')
+
+    def test_language_and_region_are_passed_on(self):
+        innertube.get_player('abc', 'de', 'AT')
+        client = self.requests[0][0]['context']['client']
+        self.assertEqual((client['hl'], client['gl']), ('de', 'AT'))
+
+    def test_unknown_language_and_region_are_left_out(self):
+        innertube.get_player('abc', '', '')
+        client = self.requests[0][0]['context']['client']
+        self.assertNotIn('hl', client)
+        self.assertNotIn('gl', client)
+
+    def test_vr_steps_in_when_android_is_refused(self):
+        self.responses['ANDROID'] = {'playabilityStatus': {'status': 'UNPLAYABLE'}}
+        player = innertube.get_player('abc', 'de', 'DE')
+        self.assertEqual(self.clients_asked(), ['ANDROID', 'ANDROID_VR'])
+        self.assertIs(player.client, innertube.ANDROID_VR)
+
+    def test_the_bot_check_is_passed_with_the_visitor_id(self):
+        self.responses['ANDROID'] = [BOT_CHECK, player_response('abc')]
+        player = innertube.get_player('abc', 'de', 'DE')
+
+        self.assertEqual(self.clients_asked(), ['ANDROID', 'ANDROID'])
+        payload, headers = self.requests[1]
+        self.assertEqual(payload['context']['client']['visitorData'], 'visitor-1')
+        self.assertEqual(headers['X-Goog-Visitor-Id'], 'visitor-1')
+        self.assertIs(player.client, innertube.ANDROID)
+
+    def test_a_refusal_carries_youtubes_reason(self):
+        self.responses['ANDROID'] = {'playabilityStatus': {'status': 'ERROR'}}
+        self.responses['ANDROID_VR'] = {'playabilityStatus': {
+            'status': 'LOGIN_REQUIRED', 'reason': 'Sign in to confirm your age'}}
+        with self.assertRaises(innertube.PlayabilityError) as context:
+            innertube.get_player('abc', 'de', 'DE')
+        self.assertEqual(str(context.exception), 'Sign in to confirm your age')
+
+    def test_a_refusal_without_reason_is_still_one(self):
+        self.responses['ANDROID'] = {'playabilityStatus': {'status': 'ERROR'}}
+        self.responses['ANDROID_VR'] = {'playabilityStatus': {'status': 'ERROR'}}
+        with self.assertRaises(innertube.PlayabilityError) as context:
+            innertube.get_player('abc', 'de', 'DE')
+        self.assertEqual(str(context.exception), '')
+
+    def test_a_substitute_video_is_a_refusal(self):
+        self.responses['ANDROID'] = player_response('other')
+        player = innertube.get_player('abc', 'de', 'DE')
+        self.assertIs(player.client, innertube.ANDROID_VR)

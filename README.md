@@ -7,7 +7,8 @@ as folders in Kodi's video window.
 
 ## Status
 
-Under construction. The add-on installs and opens, but has no content yet.
+Under construction. The add-on has no listings yet, but plays a video given by its id:
+`plugin://plugin.video.yt/play?v=<video id>`.
 
 ## Requirements
 

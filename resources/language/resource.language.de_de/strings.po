@@ -1,0 +1,27 @@
+# Kodi Media Center language file
+# Addon Name: YouTube
+# Addon id: plugin.video.yt
+# Addon Provider: ksooo
+msgid ""
+msgstr ""
+"Project-Id-Version: Kodi Add-ons\n"
+"Report-Msgid-Bugs-To: https://github.com/ksooo/plugin.video.yt/issues\n"
+"POT-Creation-Date: 2026-10-15 12:00+0000\n"
+"PO-Revision-Date: 2026-10-15 12:00+0000\n"
+"Last-Translator: ksooo\n"
+"Language-Team: German (Germany)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: de_DE\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# notification, YouTube gave no reason
+msgctxt "#30100"
+msgid "This video cannot be played."
+msgstr "Dieses Video kann nicht wiedergegeben werden."
+
+# notification
+msgctxt "#30101"
+msgid "YouTube cannot be reached."
+msgstr "YouTube ist nicht erreichbar."

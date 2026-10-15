@@ -19,6 +19,7 @@ from urllib.parse import urlsplit
 import xbmcplugin
 
 from . import addon
+from . import playback
 
 
 class Router:
@@ -43,7 +44,12 @@ class Router:
         """Show the top level of the add-on."""
         xbmcplugin.endOfDirectory(self._handle)
 
+    def _play(self):
+        """Play the video given by its id. Parameter: v."""
+        playback.play(self._handle, self._params.get('v', ''))
+
 
 _ROUTES = {
     '': Router._list_root,
+    'play': Router._play,
 }
