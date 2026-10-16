@@ -19,6 +19,10 @@ import tests.support  # noqa: F401
 from resources.lib import dataapi
 
 
+USER = dataapi.Auth('access-user', 'key-1')
+KEY_ONLY = dataapi.Auth(None, 'key-1')
+
+
 def subscription(channel_id, title):
     return {'id': 'sub-' + channel_id,
             'snippet': {'title': title, 'resourceId': {'channelId': channel_id},
@@ -63,7 +67,7 @@ class DataApiTestCase(unittest.TestCase):
         params = dict(parse_qsl(parts.query))
         self.requests.append((resource, params, headers))
         self.methods.append((method, payload))
-        if resource == 'videos':
+        if resource == 'videos' and 'id' in params:
             return {'items': [self.known_videos[video_id]
                               for video_id in params['id'].split(',')
                               if video_id in self.known_videos]}
@@ -80,7 +84,7 @@ class SubscriptionsTest(DataApiTestCase):
             {'items': [subscription('UC1', 'Alpha')], 'nextPageToken': 'p2'},
             {'items': [subscription('UC2', 'Beta')]},
         ]
-        channels = dataapi.subscriptions(token='access-user')
+        channels = dataapi.subscriptions(auth=USER)
 
         self.assertEqual([(channel.channel_id, channel.title, channel.subscription_id)
                           for channel in channels],
@@ -90,24 +94,31 @@ class SubscriptionsTest(DataApiTestCase):
 
     def test_the_own_subscriptions_are_asked_for_by_title(self):
         self.responses['subscriptions'] = [{'items': []}]
-        dataapi.subscriptions(token='access-user')
+        dataapi.subscriptions(auth=USER)
         params = self.requested('subscriptions')[0]
         self.assertEqual((params['mine'], params['order'], params['maxResults']),
                          ('true', 'alphabetical', '50'))
 
     def test_the_account_is_authorized_by_its_token(self):
         self.responses['subscriptions'] = [{'items': []}]
-        dataapi.subscriptions(token='access-user')
+        dataapi.subscriptions(auth=USER)
         self.assertEqual(self.requests[0][2], {'Authorization': 'Bearer access-user'})
+        self.assertNotIn('key', self.requests[0][1])
+
+    def test_without_an_account_the_api_key_is_used(self):
+        self.responses['videos'] = [{'items': []}]
+        dataapi.most_popular('', 50, auth=KEY_ONLY)
+        self.assertEqual(self.requests[0][2], {})
+        self.assertEqual(self.requests[0][1]['key'], 'key-1')
 
     def test_the_largest_thumbnail_is_taken(self):
         self.responses['subscriptions'] = [{'items': [subscription('UC1', 'Alpha')]}]
-        self.assertEqual(dataapi.subscriptions(token='t')[0].thumbnail, 'https://yt3/UC1-h')
+        self.assertEqual(dataapi.subscriptions(auth=USER)[0].thumbnail, 'https://yt3/UC1-h')
 
     def test_a_refusal_carries_the_reason(self):
         self.responses['subscriptions'] = [error('quotaExceeded')]
         with self.assertRaises(dataapi.DataApiError) as context:
-            dataapi.subscriptions(token='t')
+            dataapi.subscriptions(auth=USER)
         self.assertEqual(str(context.exception), 'quotaExceeded')
 
 
@@ -115,35 +126,35 @@ class SubscribeTest(DataApiTestCase):
 
     def test_subscribing_posts_the_channel_and_returns_the_subscription(self):
         self.responses['subscriptions'] = [{'id': 'sub-UC1', 'snippet': {}}]
-        self.assertEqual(dataapi.subscribe('UC1', token='t'), 'sub-UC1')
+        self.assertEqual(dataapi.subscribe('UC1', auth=USER), 'sub-UC1')
         self.assertEqual(self.methods, [('POST', {'snippet': {'resourceId': {
             'kind': 'youtube#channel', 'channelId': 'UC1'}}})])
         self.assertEqual(self.requested('subscriptions'), [{'part': 'snippet'}])
 
     def test_unsubscribing_deletes_the_subscription(self):
         self.responses['subscriptions'] = [{}]
-        dataapi.unsubscribe('sub-UC1', token='t')
+        dataapi.unsubscribe('sub-UC1', auth=USER)
         self.assertEqual(self.methods, [('DELETE', None)])
         self.assertEqual(self.requested('subscriptions'), [{'id': 'sub-UC1'}])
 
     def test_a_refused_change_is_an_error(self):
         self.responses['subscriptions'] = [error('subscriptionForbidden')]
         with self.assertRaises(dataapi.DataApiError):
-            dataapi.subscribe('UC1', token='t')
+            dataapi.subscribe('UC1', auth=USER)
 
 
 class ChannelVideosTest(DataApiTestCase):
 
     def test_the_videos_tab_playlist_is_read(self):
         self.responses['playlistItems'] = [{'items': []}]
-        dataapi.channel_videos('UCabcdef', 100, token='t')
+        dataapi.channel_videos('UCabcdef', 100, auth=USER)
         self.assertEqual(self.requested('playlistItems')[0]['playlistId'], 'UULFabcdef')
 
     def test_the_videos_come_with_details_in_playlist_order(self):
         self.responses['playlistItems'] = [{'items': [playlist_item('v2'), playlist_item('v1')]}]
         self.known_videos = {'v1': video('v1'), 'v2': video('v2')}
 
-        videos = dataapi.channel_videos('UCabc', 100, token='t')
+        videos = dataapi.channel_videos('UCabc', 100, auth=USER)
         self.assertEqual([video.video_id for video in videos], ['v2', 'v1'])
 
     def test_no_more_than_asked_for_are_fetched(self):
@@ -154,7 +165,7 @@ class ChannelVideosTest(DataApiTestCase):
         ]
         self.known_videos = {'v{}'.format(i): video('v{}'.format(i)) for i in range(100)}
 
-        videos = dataapi.channel_videos('UCabc', 60, token='t')
+        videos = dataapi.channel_videos('UCabc', 60, auth=USER)
         self.assertEqual(len(videos), 60)
         self.assertEqual(len(self.requested('playlistItems')), 2)
         self.assertEqual([len(params['id'].split(',')) for params in self.requested('videos')],
@@ -163,24 +174,72 @@ class ChannelVideosTest(DataApiTestCase):
     def test_vanished_videos_are_left_out(self):
         self.responses['playlistItems'] = [{'items': [playlist_item('v1'), playlist_item('gone')]}]
         self.known_videos = {'v1': video('v1')}
-        self.assertEqual([video.video_id for video in dataapi.channel_videos('UCabc', 100, 't')],
+        self.assertEqual([video.video_id for video in dataapi.channel_videos('UCabc', 100, USER)],
                          ['v1'])
 
     def test_a_channel_without_videos_has_none(self):
         self.responses['playlistItems'] = [error('playlistNotFound', code=404)]
-        self.assertEqual(dataapi.channel_videos('UCabc', 100, token='t'), [])
+        self.assertEqual(dataapi.channel_videos('UCabc', 100, auth=USER), [])
 
     def test_other_refusals_are_passed_on(self):
         self.responses['playlistItems'] = [error('quotaExceeded')]
         with self.assertRaises(dataapi.DataApiError):
-            dataapi.channel_videos('UCabc', 100, token='t')
+            dataapi.channel_videos('UCabc', 100, auth=USER)
+
+
+class MostPopularTest(DataApiTestCase):
+
+    def test_the_chart_of_the_region_is_asked_for(self):
+        self.responses['videos'] = [{'items': [video('v1'), video('v2')]}]
+        videos = dataapi.most_popular('DE', 100, auth=USER)
+        self.assertEqual([video.video_id for video in videos], ['v1', 'v2'])
+        params = self.requested('videos')[0]
+        self.assertEqual((params['chart'], params['regionCode']), ('mostPopular', 'DE'))
+
+    def test_an_unknown_region_is_left_to_youtube(self):
+        self.responses['videos'] = [{'items': []}]
+        dataapi.most_popular('', 100, auth=USER)
+        self.assertNotIn('regionCode', self.requested('videos')[0])
+
+
+class SearchTest(DataApiTestCase):
+
+    def test_found_videos_come_with_details_in_order_of_relevance(self):
+        self.responses['search'] = [{'items': [{'id': {'videoId': 'v2'}},
+                                               {'id': {'videoId': 'v1'}}]}]
+        self.known_videos = {'v1': video('v1'), 'v2': video('v2')}
+        videos = dataapi.search('kodi', 'DE', 'de', 50, auth=USER)
+        self.assertEqual([video.video_id for video in videos], ['v2', 'v1'])
+
+    def test_channels_and_playlists_mixed_in_are_skipped(self):
+        self.responses['search'] = [{'items': [
+            {'id': {'kind': 'youtube#channel', 'channelId': 'UC1'}},
+            {'id': {'kind': 'youtube#video', 'videoId': 'v1'}},
+            {'id': {'kind': 'youtube#playlist', 'playlistId': 'PL1'}},
+        ]}]
+        self.known_videos = {'v1': video('v1')}
+        videos = dataapi.search('kodi', 'DE', 'de', 50, auth=USER)
+        self.assertEqual([video.video_id for video in videos], ['v1'])
+
+    def test_only_videos_are_searched_for_region_and_language(self):
+        self.responses['search'] = [{'items': []}]
+        dataapi.search('kodi', 'AT', 'de', 50, auth=USER)
+        params = self.requested('search')[0]
+        self.assertEqual((params['q'], params['type'], params['regionCode'],
+                          params['relevanceLanguage']), ('kodi', 'video', 'AT', 'de'))
+
+    def test_one_page_is_enough_for_fifty(self):
+        self.responses['search'] = [{'items': [{'id': {'videoId': 'v{}'.format(i)}}
+                                               for i in range(50)], 'nextPageToken': 'p2'}]
+        dataapi.search('kodi', '', '', 50, auth=USER)
+        self.assertEqual(len(self.requested('search')), 1)
 
 
 class VideoDetailsTest(DataApiTestCase):
 
     def details(self, item):
         self.known_videos = {item['id']: item}
-        return dataapi.videos([item['id']], token='t')[0]
+        return dataapi.videos([item['id']], auth=USER)[0]
 
     def test_the_metadata_is_taken_over(self):
         details = self.details(video('v1', tags=['a', 'b']))

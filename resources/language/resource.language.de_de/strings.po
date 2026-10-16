@@ -101,6 +101,16 @@ msgctxt "#30105"
 msgid "This needs signing in."
 msgstr "Dafür ist eine Anmeldung nötig."
 
+# notification
+msgctxt "#30106"
+msgid "This needs an API key."
+msgstr "Dafür ist ein API-Schlüssel nötig."
+
+# notification, a search found no video
+msgctxt "#30107"
+msgid "Nothing found."
+msgstr "Nichts gefunden."
+
 # sign-in dialogue heading, {0} = step, {1} = number of steps
 msgctxt "#30110"
 msgid "Sign in ({0} of {1})"
@@ -151,37 +161,67 @@ msgctxt "#30200"
 msgid "Subscriptions"
 msgstr "Abos"
 
-# context menu of a video
+# context menu of a video, {0} = channel
 msgctxt "#30201"
-msgid "Subscribe to channel"
-msgstr "Kanal abonnieren"
+msgid "Subscribe to channel {0}"
+msgstr "Kanal {0} abonnieren"
 
-# context menu of a video
+# context menu of a video, {0} = channel
 msgctxt "#30202"
-msgid "Unsubscribe from channel"
-msgstr "Kanal-Abo beenden"
+msgid "Unsubscribe from channel {0}"
+msgstr "Abo von Kanal {0} beenden"
 
 # context menu of a channel
 msgctxt "#30203"
 msgid "Unsubscribe"
 msgstr "Abo beenden"
 
-# context menu of a video
+# context menu of a video, {0} = channel
 msgctxt "#30204"
-msgid "Go to channel"
-msgstr "Zum Kanal gehen"
+msgid "Go to channel {0}"
+msgstr "Zu Kanal {0} gehen"
 
 # notification, {0} = channel
 msgctxt "#30210"
-msgid "Subscribed to {0}"
-msgstr "{0} abonniert"
+msgid "Subscribed to channel {0}"
+msgstr "Kanal {0} abonniert"
 
 # notification, {0} = channel
 msgctxt "#30211"
-msgid "Unsubscribed from {0}"
-msgstr "Abo von {0} beendet"
+msgid "Unsubscribed from channel {0}"
+msgstr "Abo von Kanal {0} beendet"
 
 # confirmation, {0} = channel
 msgctxt "#30212"
-msgid "Unsubscribe from {0}?"
-msgstr "Abo von {0} beenden?"
+msgid "Unsubscribe from channel {0}?"
+msgstr "Abo von Kanal {0} beenden?"
+
+# main menu
+msgctxt "#30300"
+msgid "Trending"
+msgstr "Trends"
+
+# main menu, also heading of the search keyboard
+msgctxt "#30301"
+msgid "Search"
+msgstr "Suche"
+
+# folder below search
+msgctxt "#30302"
+msgid "Recent searches"
+msgstr "Letzte Suchen"
+
+# entry below search
+msgctxt "#30303"
+msgid "New search…"
+msgstr "Neue Suche …"
+
+# context menu of a recent search
+msgctxt "#30304"
+msgid "Delete"
+msgstr "Löschen"
+
+# confirmation
+msgctxt "#30305"
+msgid "Delete this search?"
+msgstr "Diese Suche löschen?"

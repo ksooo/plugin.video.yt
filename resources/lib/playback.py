@@ -31,8 +31,7 @@ MANIFEST_TIMEOUT_SECONDS = 30
 def play(handle, video_id):
     """Resolve the plugin URL of the video for Kodi's player."""
     try:
-        player = innertube.get_player(video_id, xbmc.getLanguage(xbmc.ISO_639_1),
-                                      xbmc.getInfoLabel('System.Locale(iso)'),
+        player = innertube.get_player(video_id, addon.language(), addon.region(),
                                       account.access_token)
     except innertube.PlayabilityError as error:
         addon.log('{} not playable: {}'.format(video_id, error))

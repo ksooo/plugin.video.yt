@@ -7,10 +7,18 @@ as folders in Kodi's video window.
 
 ## Status
 
-Under construction. Signed in, the add-on lists your subscriptions: below **Subscriptions** the
-channels, below each channel its 100 newest videos - those of the channel's **Videos** tab on
-YouTube, so neither shorts nor live recordings. A channel's context menu unsubscribes from it, a
-video's subscribes to or unsubscribes from its channel. Any video plays from
+Under construction. The top level offers:
+
+* **Subscriptions**, when signed in: the channels, below each channel its 100 newest videos -
+  those of the channel's **Videos** tab on YouTube, so neither shorts nor live recordings.
+* **Trending**: YouTube's 100 most popular videos in the region set in Kodi.
+* **Search**: a new search, and the 20 recent searches to run again. YouTube searches by
+  relevance, in the region and language set in Kodi.
+
+Trending and search work with just the API key, without signing in.
+
+A video's context menu goes to its channel and, when signed in, subscribes to or unsubscribes
+from it. A channel's context menu in the subscriptions unsubscribes from it. Any video plays from
 `plugin://plugin.video.yt/play/?v=<video id>`.
 
 ## Requirements

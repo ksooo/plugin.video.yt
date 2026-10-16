@@ -8,6 +8,7 @@
 #
 """Directory listings: plugin URLs, list items and handing them to Kodi."""
 
+import re
 from urllib.parse import urlencode
 
 import xbmcgui
@@ -22,6 +23,13 @@ BASE_URL = 'plugin://plugin.video.yt/'
 BREADCRUMB_SEPARATOR = ' / '
 
 CONTENT_VIDEOS = 'videos'
+
+#: Emojis and blanks at the start of a title. Kodi renders a label starting
+#: with an emoji blank, while other emojis merely show as boxes. Covered are
+#: the emoji blocks, the symbols and dingbats YouTube titles use as emojis,
+#: and the invisible characters emojis are composed with.
+_LEADING_EMOJIS = re.compile('^(?:[\U0001F000-\U0001FAFF☀-➿︎️‍'
+                             '⃣\U000E0020-\U000E007F]|\\s)+')
 
 
 def url(route, **params):
@@ -57,31 +65,57 @@ def folder_item(label, route, thumbnail='', context_menu=(), **params):
     return url(route, **params), list_item, True
 
 
+def action_item(label, route, icon):
+    """Build the listing tuple of an entry that runs an action instead of opening a folder.
+
+    Kodi runs a plugin URL that is neither folder nor playable as a script,
+    with no directory pending - unlike a folder, from there the action can
+    send Kodi elsewhere with Container.Update.
+    """
+    list_item = xbmcgui.ListItem(label=label, offscreen=True)
+    list_item.setIsFolder(False)
+    list_item.setArt({'icon': icon})
+    return url(route), list_item, False
+
+
+def search_item(query):
+    """Build the listing tuple of a recent search, to run again or delete."""
+    return folder_item(query, 'search/results',
+                       context_menu=[(addon.localize(30304), 'RunPlugin({})'.format(
+                           url('search/forget', q=query)))],
+                       q=query)
+
+
 def channel_item(channel):
-    """Build the listing tuple of a subscribed channel."""
+    """Build the listing tuple of a subscribed channel, below the subscriptions."""
     return folder_item(channel.title, 'channel', channel.thumbnail,
                        context_menu=[_unsubscribe_entry(30203, channel.channel_id,
                                                         channel.title)],
-                       id=channel.channel_id, title=channel.title)
+                       id=channel.channel_id, title=channel.title, parent='subscriptions')
 
 
 def video_item(video, subscribed, link_channel):
     """Build the listing tuple of a playable video.
 
     subscribed tells whether the account subscribed to the video's channel,
-    link_channel whether to offer going there.
+    None if nobody is signed in. link_channel tells whether to offer going to
+    the channel.
     """
     context_menu = []
     if link_channel:
-        context_menu.append((addon.localize(30204), 'Container.Update({})'.format(
-            url('channel', id=video.channel_id, title=video.channel_title))))
+        context_menu.append((addon.localize(30204).format(video.channel_title),
+                             'Container.Update({})'.format(url('channel', id=video.channel_id,
+                                                               title=video.channel_title))))
     if subscribed:
         context_menu.append(_unsubscribe_entry(30202, video.channel_id, video.channel_title))
-    else:
-        context_menu.append((addon.localize(30201), 'RunPlugin({})'.format(
-            url('subscribe', channel=video.channel_id, title=video.channel_title))))
+    elif subscribed is not None:
+        context_menu.append((addon.localize(30201).format(video.channel_title),
+                             'RunPlugin({})'.format(url('subscribe', channel=video.channel_id,
+                                                        title=video.channel_title))))
 
-    list_item = xbmcgui.ListItem(label=video.title, offscreen=True)
+    title = _LEADING_EMOJIS.sub('', video.title) or video.title
+
+    list_item = xbmcgui.ListItem(label=title, offscreen=True)
     list_item.addContextMenuItems(context_menu)
     list_item.setIsFolder(False)
     list_item.setProperty('IsPlayable', 'true')
@@ -93,7 +127,7 @@ def video_item(video, subscribed, link_channel):
 
     info_tag = list_item.getVideoInfoTag()
     info_tag.setMediaType('video')
-    info_tag.setTitle(video.title)
+    info_tag.setTitle(title)
     info_tag.setPlot(video.description)
     info_tag.setStudios([video.channel_title])
     info_tag.setPremiered(video.published[:10])
@@ -105,7 +139,7 @@ def video_item(video, subscribed, link_channel):
 
 
 def _unsubscribe_entry(label_id, channel_id, channel_title):
-    return addon.localize(label_id), 'RunPlugin({})'.format(
+    return addon.localize(label_id).format(channel_title), 'RunPlugin({})'.format(
         url('unsubscribe', channel=channel_id, title=channel_title))
 
 

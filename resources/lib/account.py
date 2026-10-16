@@ -14,7 +14,6 @@ player requests may fetch age-restricted videos. The tokens are kept in the
 profile directory, not in the settings.
 """
 
-import json
 import os
 import time
 
@@ -147,16 +146,11 @@ def _revoke(all_tokens):
 
 
 def _load():
-    try:
-        with open(addon.profile_path(TOKENS_FILE), encoding='utf-8') as tokens_file:
-            return json.load(tokens_file)
-    except (OSError, ValueError):
-        return {}
+    return addon.load_json(addon.profile_path(TOKENS_FILE), {})
 
 
 def _save(tokens):
-    with open(addon.profile_path(TOKENS_FILE), 'w', encoding='utf-8') as tokens_file:
-        json.dump(tokens, tokens_file)
+    addon.save_json(addon.profile_path(TOKENS_FILE), tokens)
 
 
 def _forget():

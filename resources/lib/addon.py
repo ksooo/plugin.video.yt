@@ -8,6 +8,7 @@
 #
 """Thin convenience layer around the Kodi add-on API."""
 
+import json
 import os
 
 import xbmc
@@ -21,6 +22,7 @@ ADDON_NAME = ADDON.getAddonInfo('name')
 ADDON_ICON = ADDON.getAddonInfo('icon')
 
 # Setting identifiers, must match resources/settings.xml.
+SETTING_API_KEY = 'api_key'
 SETTING_CLIENT_ID = 'client_id'
 SETTING_CLIENT_SECRET = 'client_secret'
 SETTING_SIGNED_IN = 'signed_in'
@@ -29,6 +31,21 @@ SETTING_SIGNED_IN = 'signed_in'
 def localize(string_id):
     """Return the localised string with the given identifier."""
     return ADDON.getLocalizedString(string_id)
+
+
+def language():
+    """Return Kodi's language as ISO 639-1 code such as 'de'."""
+    return xbmc.getLanguage(xbmc.ISO_639_1)
+
+
+def region():
+    """Return Kodi's region as ISO 3166 code such as 'DE', empty if unknown."""
+    return xbmc.getInfoLabel('System.Locale(iso)')
+
+
+def ask_text(heading):
+    """Let the user type a text. Returns it stripped, empty if cancelled."""
+    return xbmcgui.Dialog().input(heading).strip()
 
 
 def get_string_setting(setting_id):
@@ -43,9 +60,32 @@ def set_bool_setting(setting_id, value):
 
 def profile_path(file_name):
     """Return the full path of a file in the add-on's profile directory, creating that."""
-    directory = xbmcvfs.translatePath(ADDON.getAddonInfo('profile'))
+    return _path_in(ADDON.getAddonInfo('profile'), file_name)
+
+
+def temp_path(file_name):
+    """Return the full path of a file in the add-on's part of Kodi's temp directory."""
+    return _path_in('special://temp/{}/'.format(ADDON_ID), file_name)
+
+
+def _path_in(directory, file_name):
+    directory = xbmcvfs.translatePath(directory)
     os.makedirs(directory, exist_ok=True)
     return os.path.join(directory, file_name)
+
+
+def load_json(path, default):
+    """Return the data kept in the JSON file, or default if there is none."""
+    try:
+        with open(path, encoding='utf-8') as json_file:
+            return json.load(json_file)
+    except (OSError, ValueError):
+        return default
+
+
+def save_json(path, data):
+    with open(path, 'w', encoding='utf-8') as json_file:
+        json.dump(data, json_file)
 
 
 def log(message, level=xbmc.LOGDEBUG):

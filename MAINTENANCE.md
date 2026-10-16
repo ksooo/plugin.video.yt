@@ -27,8 +27,35 @@ those in a playlist of its own: `UULF` followed by the channel id without its
 `UC`. It holds neither shorts (`UUSH`) nor live recordings (`UULV`), and
 does not exist for a channel without a single such video.
 
-There is no "next page" entry: a channel shows its newest 100 videos and
-that's it.
+There is no "next page" entry: a channel and the trending videos show 100
+videos, a search 50, and that's it.
+
+Video titles lose the emojis they start with: Kodi renders a label starting
+with one blank. Emojis further on stay, as boxes - skin fonts have no glyphs
+for them. `listing._LEADING_EMOJIS` covers the emoji blocks, the symbols and
+dingbats used as emojis, and the invisible characters emojis are composed
+with; dashes, quotes or the euro sign are not affected.
+
+A channel's breadcrumb only names the subscriptions when the channel was
+opened from there - the `parent` parameter of its URL says so. Gone to from
+any other listing, it just names the channel.
+
+### Search
+
+The search folder follows Kodi's own PVR search: "New search..." and a
+folder of the recent searches, nothing between real entries. "New search..."
+is neither folder nor playable, so Kodi runs it as an action. That action
+sends Kodi to the results with `Container.Update`, so they have a URL of
+their own and going back to them does not ask again. From a folder this
+would not work: Kodi treats the listing the folder never delivers as failed
+and drops the `Container.Update`. Every listing of results moves the query
+to the top of the recent searches; finding nothing keeps Kodi where it is,
+with a notification.
+
+A search costs 101 quota units, so `search.py` keeps the results for 15
+minutes in Kodi's temp directory. Going back to them from a video's channel
+or after playback would otherwise search anew. The recent searches are kept
+in the profile directory and survive restarts.
 
 ### Subscriptions in context menus
 
@@ -47,7 +74,12 @@ is gone there.
 
 `dataapi.py` wraps the calls; each notes its quota cost. A project gets
 10,000 units a day. Opening the subscriptions costs 1 unit per 50 channels,
-opening a channel 4 units, subscribing or unsubscribing 50. The API reports errors as JSON with a `reason`
+opening a channel 4 units, the trending videos 2, a search 101, subscribing
+or unsubscribing 50.
+
+A signed-in account's token authorizes every request, for its own data as
+for public data. Without a sign-in, the API key does for the public data -
+trending, search, channels. The API reports errors as JSON with a `reason`
 such as `quotaExceeded`, which the add-on turns into a notification.
 
 ## Signing in

@@ -26,6 +26,7 @@ NOTIFICATIONS = []
 BUILTINS = []
 CONFIRMATIONS = []
 CONFIRM_ANSWER = [True]
+INPUT_ANSWER = ['']
 PLUGIN_ITEMS = []
 PLUGIN_STATE = {}
 INFO_LABELS = {}
@@ -177,6 +178,9 @@ class Dialog:
         CONFIRMATIONS.append((heading, message))
         return CONFIRM_ANSWER[0]
 
+    def input(self, heading, defaultt='', type=0, option=0, autoclose=0):
+        return INPUT_ANSWER[0]
+
 
 class DialogProgress:
     def create(self, heading, message=''):
@@ -242,6 +246,7 @@ def reset():
     LANGUAGE[0] = 'de'
     ABORT_REQUESTED[0] = False
     CONFIRM_ANSWER[0] = True
+    INPUT_ANSWER[0] = ''
     SETTINGS.clear()
     SETTINGS.update(DEFAULT_SETTINGS)
     del PROGRESS[:]

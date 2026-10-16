@@ -23,6 +23,10 @@ API_URL = 'https://www.googleapis.com/youtube/v3/'
 #: The most items the API returns per request.
 PAGE_SIZE = 50
 
+#: How a request is authorized: by the access token of a signed-in account,
+#: or else by an API key. Whatever concerns the account itself needs the token.
+Auth = collections.namedtuple('Auth', 'token api_key')
+
 #: A subscribed channel. Unsubscribing takes the subscription's id, not the channel's.
 Channel = collections.namedtuple('Channel', 'channel_id title thumbnail subscription_id')
 
@@ -39,33 +43,33 @@ class DataApiError(Exception):
     """The API refused. The message is its reason, e.g. 'quotaExceeded'."""
 
 
-def subscriptions(token):
+def subscriptions(auth):
     """Return the channels the account subscribed to, by title. 1 unit per 50 channels."""
     channels = []
     for item in _all_items('subscriptions', {
             'part': 'snippet',
             'mine': 'true',
             'order': 'alphabetical',
-    }, token):
+    }, auth):
         snippet = item['snippet']
         channels.append(Channel(snippet['resourceId']['channelId'], snippet['title'],
                                 _thumbnail(snippet), item['id']))
     return channels
 
 
-def subscribe(channel_id, token):
+def subscribe(channel_id, auth):
     """Subscribe to the channel and return the subscription's id. 50 units."""
-    return _request('POST', 'subscriptions', {'part': 'snippet'}, token, {
+    return _request('POST', 'subscriptions', {'part': 'snippet'}, auth, {
         'snippet': {'resourceId': {'kind': 'youtube#channel', 'channelId': channel_id}},
     })['id']
 
 
-def unsubscribe(subscription_id, token):
+def unsubscribe(subscription_id, auth):
     """End the subscription. 50 units."""
-    _request('DELETE', 'subscriptions', {'id': subscription_id}, token)
+    _request('DELETE', 'subscriptions', {'id': subscription_id}, auth)
 
 
-def channel_videos(channel_id, count, token):
+def channel_videos(channel_id, count, auth):
     """Return the newest videos of the channel, newest first. 2 units per 50 videos.
 
     These are the videos of the channel page's "Videos" tab: no shorts, no
@@ -78,7 +82,7 @@ def channel_videos(channel_id, count, token):
         for item in _all_items('playlistItems', {
                 'part': 'contentDetails',
                 'playlistId': playlist_id,
-        }, token, limit=count):
+        }, auth, limit=count):
             video_ids.append(item['contentDetails']['videoId'])
     except DataApiError as error:
         # The playlist only exists once the channel has a video in it.
@@ -86,10 +90,38 @@ def channel_videos(channel_id, count, token):
             return []
         raise
 
-    return videos(video_ids, token)
+    return videos(video_ids, auth)
 
 
-def videos(video_ids, token):
+def most_popular(region, count, auth):
+    """Return the most popular videos in the region, most popular first. 1 unit per 50.
+
+    region is an ISO 3166 code such as 'DE', or empty for YouTube's default.
+    """
+    params = {'part': 'snippet,contentDetails', 'chart': 'mostPopular'}
+    if region:
+        params['regionCode'] = region
+    return [_video(item) for item in _all_items('videos', params, auth, limit=count)]
+
+
+def search(query, region, language, count, auth):
+    """Return the videos YouTube finds most relevant for the query. 101 units per 50.
+
+    region and language are ISO codes such as 'DE' and 'de'; either may be empty.
+    """
+    params = {'part': 'id', 'type': 'video', 'q': query}
+    if region:
+        params['regionCode'] = region
+    if language:
+        params['relevanceLanguage'] = language
+    # Even searching for videos only, YouTube mixes in the odd channel or playlist.
+    video_ids = [item['id']['videoId']
+                 for item in _all_items('search', params, auth, limit=count)
+                 if 'videoId' in item.get('id', {})]
+    return videos(video_ids, auth)
+
+
+def videos(video_ids, auth):
     """Return the details of the videos in the given order. 1 unit per 50 videos.
 
     Videos that are private or deleted by now are left out.
@@ -100,13 +132,13 @@ def videos(video_ids, token):
             'part': 'snippet,contentDetails',
             'id': ','.join(video_ids[start:start + PAGE_SIZE]),
             'maxResults': PAGE_SIZE,
-        }, token)
+        }, auth)
         for item in response.get('items', []):
             details[item['id']] = _video(item)
     return [details[video_id] for video_id in video_ids if video_id in details]
 
 
-def _all_items(resource, params, token, limit=None):
+def _all_items(resource, params, auth, limit=None):
     """Yield the items of all pages, at most limit of them."""
     count = 0
     page_token = None
@@ -114,7 +146,7 @@ def _all_items(resource, params, token, limit=None):
         page_params = dict(params, maxResults=PAGE_SIZE)
         if page_token:
             page_params['pageToken'] = page_token
-        response = _request('GET', resource, page_params, token)
+        response = _request('GET', resource, page_params, auth)
 
         for item in response.get('items', []):
             if limit is not None and count >= limit:
@@ -127,9 +159,14 @@ def _all_items(resource, params, token, limit=None):
             return
 
 
-def _request(method, resource, params, token, payload=None):
+def _request(method, resource, params, auth, payload=None):
+    headers = {}
+    if auth.token:
+        headers['Authorization'] = 'Bearer ' + auth.token
+    else:
+        params = dict(params, key=auth.api_key)
     response = http.request_json(method, '{}{}?{}'.format(API_URL, resource, urlencode(params)),
-                                 {'Authorization': 'Bearer ' + token}, payload)
+                                 headers, payload)
     error = response.get('error')
     if error is not None:
         errors = error.get('errors') or [{}]

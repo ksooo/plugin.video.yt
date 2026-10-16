@@ -18,9 +18,9 @@ from tests import support
 from tests.support import AddonTestCase
 from tests.support import tokens
 
+from resources.lib import addon
 from resources.lib import dataapi
 from resources.lib import http
-from resources.lib import listing
 from resources.lib.router import Router
 
 CHANNELS = [dataapi.Channel('UC1', 'Alpha & Omega', 'https://yt3/UC1', 'sub-UC1'),
@@ -45,6 +45,7 @@ class BrowseTestCase(AddonTestCase):
         # Results of the data API calls by name, and an exception all of them
         # raise instead.
         self.results = {'subscriptions': CHANNELS, 'channel_videos': [VIDEO],
+                        'most_popular': [VIDEO], 'search': [VIDEO],
                         'subscribe': 'sub-new', 'unsubscribe': None}
         self.failure = None
         for name in self.results:
@@ -53,8 +54,8 @@ class BrowseTestCase(AddonTestCase):
             self.addCleanup(patcher.stop)
 
     def _query(self, name):
-        def query(*args, token):
-            self.queries.append((name, args, token))
+        def query(*args, auth):
+            self.queries.append((name, args, auth.token or 'key:' + auth.api_key))
             if self.failure is not None:
                 raise self.failure
             return self.results[name]
@@ -83,15 +84,27 @@ class BrowseTestCase(AddonTestCase):
         return [list_item.label for _, list_item, _ in items]
 
 
+    @staticmethod
+    def sign_out(api_key=''):
+        support.reset()
+        support.SETTINGS['api_key'] = api_key
+
+
 class RootTest(BrowseTestCase):
 
-    def test_subscriptions_are_offered_when_signed_in(self):
+    def test_everything_is_offered_when_signed_in(self):
         items = self.dispatch()
-        self.assertEqual(self.labels(items), ['L30200'])
-        self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/subscriptions/'])
+        self.assertEqual(self.labels(items), ['L30200', 'L30300', 'L30301'])
+        self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/subscriptions/',
+                                            'plugin://plugin.video.yt/trending/',
+                                            'plugin://plugin.video.yt/search/'])
 
-    def test_nothing_needing_a_sign_in_is_offered_without(self):
-        support.reset()
+    def test_an_api_key_is_enough_for_trending_and_search(self):
+        self.sign_out(api_key='key-1')
+        self.assertEqual(self.labels(self.dispatch()), ['L30300', 'L30301'])
+
+    def test_without_either_nothing_is_offered(self):
+        self.sign_out()
         self.assertEqual(self.dispatch(), [])
         self.assertTrue(support.PLUGIN_STATE['succeeded'])
 
@@ -103,8 +116,8 @@ class SubscriptionsTest(BrowseTestCase):
 
         self.assertEqual(self.labels(items), ['Alpha & Omega', 'Beta'])
         self.assertTrue(all(is_folder for _, _, is_folder in items))
-        self.assertEqual(self.urls(items)[0],
-                         'plugin://plugin.video.yt/channel/?id=UC1&title=Alpha+%26+Omega')
+        self.assertEqual(self.urls(items)[0], 'plugin://plugin.video.yt/channel/'
+                                              '?id=UC1&parent=subscriptions&title=Alpha+%26+Omega')
 
     def test_they_are_asked_for_with_the_users_token(self):
         self.dispatch('subscriptions')
@@ -137,8 +150,9 @@ class SubscriptionsTest(BrowseTestCase):
 
 class ChannelTest(BrowseTestCase):
 
-    def channel(self, channel_id='UC1'):
-        return self.dispatch('channel', '?id={}&title=Alpha+%26+Omega'.format(channel_id))
+    def channel(self, channel_id='UC1', parent='&parent=subscriptions'):
+        return self.dispatch('channel',
+                             '?id={}&title=Alpha+%26+Omega{}'.format(channel_id, parent))
 
     def test_the_newest_hundred_videos_of_the_channel_are_asked_for(self):
         self.channel()
@@ -176,9 +190,19 @@ class ChannelTest(BrowseTestCase):
         self.assertEqual(support.PLUGIN_STATE['sort_methods'],
                          ['unsorted', 'date', 'title', 'duration'])
 
-    def test_the_breadcrumb_names_the_channel(self):
+    def test_the_breadcrumb_names_the_channel_below_the_subscriptions(self):
         self.channel()
         self.assertEqual(support.PLUGIN_STATE['category'], 'L30200 / Alpha & Omega')
+
+    def test_the_breadcrumb_names_just_the_channel_when_gone_to(self):
+        self.channel(parent='')
+        self.assertEqual(support.PLUGIN_STATE['category'], 'Alpha & Omega')
+
+    def test_without_sign_in_it_is_listed_with_the_api_key_and_no_subscribing(self):
+        self.sign_out(api_key='key-1')
+        list_item = self.channel(parent='')[0][1]
+        self.assertEqual(self.queries, [('channel_videos', ('UC1', 100), 'key:key-1')])
+        self.assertEqual(list_item.context_menu, [])
 
     def test_a_subscribed_channels_videos_offer_unsubscribing_only(self):
         self.cache_channels({'UC1': 'sub-UC1'})
@@ -206,13 +230,136 @@ class ChannelTest(BrowseTestCase):
         self.assertEqual(self.cached_channels(), {'UC1': 'sub-UC1', 'UC2': 'sub-UC2'})
 
 
-class VideoContextMenuTest(BrowseTestCase):
+GO_TO_CHANNEL = (
+    'L30204', 'Container.Update(plugin://plugin.video.yt/channel/?id=UC1&title=Alpha+%26+Omega)')
 
-    def test_videos_elsewhere_lead_to_their_channel(self):
-        _, list_item, _ = listing.video_item(VIDEO, subscribed=True, link_channel=True)
-        self.assertEqual(list_item.context_menu[0], (
-            'L30204',
-            'Container.Update(plugin://plugin.video.yt/channel/?id=UC1&title=Alpha+%26+Omega)'))
+
+class TrendingTest(BrowseTestCase):
+
+    def test_the_most_popular_videos_of_kodis_region_are_listed(self):
+        support.INFO_LABELS['System.Locale(iso)'] = 'AT'
+        items = self.dispatch('trending')
+        self.assertEqual(self.queried('most_popular'), [('AT', 100)])
+        self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/play/?v=dQw4w9WgXcQ'])
+        self.assertEqual(support.PLUGIN_STATE['category'], 'L30300')
+
+    def test_videos_lead_to_their_channel_and_know_the_subscription(self):
+        self.cache_channels({'UC1': 'sub-UC1'})
+        list_item = self.dispatch('trending')[0][1]
+        self.assertEqual([entry[0] for entry in list_item.context_menu], ['L30204', 'L30202'])
+        self.assertEqual(list_item.context_menu[0], GO_TO_CHANNEL)
+
+    def test_the_entries_name_the_channel(self):
+        self.cache_channels({})
+        with mock.patch.object(addon, 'localize', lambda string_id: 'L{} {{0}}'.format(string_id)):
+            list_item = self.dispatch('trending')[0][1]
+        self.assertEqual([entry[0] for entry in list_item.context_menu],
+                         ['L30204 Alpha & Omega', 'L30201 Alpha & Omega'])
+
+    def test_without_sign_in_the_api_key_is_used_and_nobody_subscribes(self):
+        self.sign_out(api_key='key-1')
+        list_item = self.dispatch('trending')[0][1]
+        self.assertEqual(self.queries, [('most_popular', ('', 100), 'key:key-1')])
+        self.assertEqual(list_item.context_menu, [GO_TO_CHANNEL])
+
+
+class EmojiTest(BrowseTestCase):
+
+    TITLES = {
+        '🤯 Home Assistant 2026.10: Deine Dashboard-Karten können jetzt SO VIEL MEHR!':
+            'Home Assistant 2026.10: Deine Dashboard-Karten können jetzt SO VIEL MEHR!',
+        '✈️ Fernzugriff Home Assistant': 'Fernzugriff Home Assistant',
+        '🦸‍♂️🚀  From Zero to Hero': 'From Zero to Hero',
+        'DIESE Karte verdient Liebe! ❤️ Die schlauste Raum-Karte':
+            'DIESE Karte verdient Liebe! ❤️ Die schlauste Raum-Karte',
+        'Dieses Display SIEHT dich – mmWave Radar für 10 €':
+            'Dieses Display SIEHT dich – mmWave Radar für 10 €',
+        '🚀': '🚀',
+    }
+
+    def listed(self, title):
+        self.results['most_popular'] = [VIDEO._replace(title=title)]
+        list_item = self.dispatch('trending')[0][1]
+        return list_item.label, list_item.info_tag.values['Title']
+
+    def test_only_emojis_starting_a_title_are_removed(self):
+        for title, expected in self.TITLES.items():
+            self.assertEqual(self.listed(title), (expected, expected), title)
+
+
+class SearchTest(BrowseTestCase):
+
+    def test_the_search_offers_a_new_search_and_the_recent_ones(self):
+        items = self.dispatch('search')
+        self.assertEqual(self.labels(items), ['L30303', 'L30302'])
+        self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/search/new/',
+                                            'plugin://plugin.video.yt/search/recent/'])
+
+    def test_a_new_search_is_an_action_the_recent_ones_a_folder(self):
+        items = self.dispatch('search')
+        self.assertEqual([is_folder for _, _, is_folder in items], [False, True])
+        self.assertNotIn('IsPlayable', items[0][1].properties)
+
+    def test_a_new_search_shows_its_results_under_a_url_of_their_own(self):
+        support.INPUT_ANSWER[0] = '  kodi addon '
+        self.act('search/new')
+        self.assertEqual(support.BUILTINS, [
+            'Container.Update(plugin://plugin.video.yt/search/results/?q=kodi+addon)'])
+
+    def test_a_cancelled_search_goes_nowhere(self):
+        self.act('search/new')
+        self.assertEqual(support.BUILTINS, [])
+
+    def test_recent_searches_can_be_deleted(self):
+        self.dispatch('search/results', '?q=kodi addon')
+        list_item = self.dispatch('search/recent')[0][1]
+        self.assertEqual(list_item.context_menu, [(
+            'L30304', 'RunPlugin(plugin://plugin.video.yt/search/forget/?q=kodi+addon)')])
+
+    def test_deleting_asks_first_and_refreshes(self):
+        self.dispatch('search/results', '?q=first')
+        self.dispatch('search/results', '?q=second')
+        support.reset_output()
+        Router([support.BASE_URL + 'search/forget/', '-1', '?q=first']).dispatch()
+
+        self.assertEqual(support.CONFIRMATIONS, [('YouTube', 'L30305')])
+        self.assertEqual(support.BUILTINS, ['Container.Refresh'])
+        self.assertEqual(self.labels(self.dispatch('search/recent')), ['second'])
+
+    def test_saying_no_keeps_the_search(self):
+        self.dispatch('search/results', '?q=first')
+        support.CONFIRM_ANSWER[0] = False
+        support.reset_output()
+        Router([support.BASE_URL + 'search/forget/', '-1', '?q=first']).dispatch()
+        self.assertEqual(support.BUILTINS, [])
+        self.assertEqual(self.labels(self.dispatch('search/recent')), ['first'])
+
+    def test_finding_nothing_is_reported_and_kodi_stays(self):
+        self.results['search'] = []
+        self.assertEqual(self.dispatch('search/results', '?q=xyzzy'), [])
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30107')])
+        self.assertFalse(support.PLUGIN_STATE['succeeded'])
+
+    def act(self, route):
+        """Run the plugin as Kodi does for an entry that is neither folder nor playable."""
+        support.reset_output()
+        Router([support.BASE_URL + route + '/', '-1', '']).dispatch()
+        self.assertNotIn('succeeded', support.PLUGIN_STATE)
+
+    def test_results_are_searched_in_kodis_region_and_language(self):
+        support.INFO_LABELS['System.Locale(iso)'] = 'AT'
+        items = self.dispatch('search/results', '?q=kodi')
+        self.assertEqual(self.queried('search'), [('kodi', 'AT', 'de', 50)])
+        self.assertEqual(self.labels(items), ['Never Gonna Give You Up'])
+        self.assertEqual(support.PLUGIN_STATE['category'], 'L30301 / kodi')
+
+    def test_searching_puts_the_query_on_top_of_the_recent_ones(self):
+        self.dispatch('search/results', '?q=first')
+        self.dispatch('search/results', '?q=second')
+        items = self.dispatch('search/recent')
+        self.assertEqual(self.labels(items), ['second', 'first'])
+        self.assertEqual(self.urls(items)[0], 'plugin://plugin.video.yt/search/results/?q=second')
+        self.assertFalse(support.PLUGIN_STATE['cacheToDisc'])
 
 
 class SubscriptionChangeTest(BrowseTestCase):
@@ -296,9 +443,15 @@ class SubscriptionChangeTest(BrowseTestCase):
 class FailureTest(BrowseTestCase):
 
     def test_without_sign_in_the_user_is_told(self):
-        support.reset()
+        self.sign_out(api_key='key-1')
         self.dispatch('subscriptions')
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30105')])
+        self.assertFalse(support.PLUGIN_STATE['succeeded'])
+
+    def test_without_sign_in_nor_api_key_the_user_is_told(self):
+        self.sign_out()
+        self.dispatch('trending')
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30106')])
         self.assertFalse(support.PLUGIN_STATE['succeeded'])
 
     def test_a_used_up_quota_is_named(self):

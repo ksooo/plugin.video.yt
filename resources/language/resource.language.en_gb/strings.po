@@ -101,6 +101,16 @@ msgctxt "#30105"
 msgid "This needs signing in."
 msgstr ""
 
+# notification
+msgctxt "#30106"
+msgid "This needs an API key."
+msgstr ""
+
+# notification, a search found no video
+msgctxt "#30107"
+msgid "Nothing found."
+msgstr ""
+
 # sign-in dialogue heading, {0} = step, {1} = number of steps
 msgctxt "#30110"
 msgid "Sign in ({0} of {1})"
@@ -151,14 +161,14 @@ msgctxt "#30200"
 msgid "Subscriptions"
 msgstr ""
 
-# context menu of a video
+# context menu of a video, {0} = channel
 msgctxt "#30201"
-msgid "Subscribe to channel"
+msgid "Subscribe to channel {0}"
 msgstr ""
 
-# context menu of a video
+# context menu of a video, {0} = channel
 msgctxt "#30202"
-msgid "Unsubscribe from channel"
+msgid "Unsubscribe from channel {0}"
 msgstr ""
 
 # context menu of a channel
@@ -166,22 +176,52 @@ msgctxt "#30203"
 msgid "Unsubscribe"
 msgstr ""
 
-# context menu of a video
+# context menu of a video, {0} = channel
 msgctxt "#30204"
-msgid "Go to channel"
+msgid "Go to channel {0}"
 msgstr ""
 
 # notification, {0} = channel
 msgctxt "#30210"
-msgid "Subscribed to {0}"
+msgid "Subscribed to channel {0}"
 msgstr ""
 
 # notification, {0} = channel
 msgctxt "#30211"
-msgid "Unsubscribed from {0}"
+msgid "Unsubscribed from channel {0}"
 msgstr ""
 
 # confirmation, {0} = channel
 msgctxt "#30212"
-msgid "Unsubscribe from {0}?"
+msgid "Unsubscribe from channel {0}?"
+msgstr ""
+
+# main menu
+msgctxt "#30300"
+msgid "Trending"
+msgstr ""
+
+# main menu, also heading of the search keyboard
+msgctxt "#30301"
+msgid "Search"
+msgstr ""
+
+# folder below search
+msgctxt "#30302"
+msgid "Recent searches"
+msgstr ""
+
+# entry below search
+msgctxt "#30303"
+msgid "New search…"
+msgstr ""
+
+# context menu of a recent search
+msgctxt "#30304"
+msgid "Delete"
+msgstr ""
+
+# confirmation
+msgctxt "#30305"
+msgid "Delete this search?"
 msgstr ""
