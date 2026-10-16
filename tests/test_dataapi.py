@@ -20,7 +20,8 @@ from resources.lib import dataapi
 
 
 def subscription(channel_id, title):
-    return {'snippet': {'title': title, 'resourceId': {'channelId': channel_id},
+    return {'id': 'sub-' + channel_id,
+            'snippet': {'title': title, 'resourceId': {'channelId': channel_id},
                         'thumbnails': {'default': {'url': 'https://yt3/{}-s'.format(channel_id)},
                                        'high': {'url': 'https://yt3/{}-h'.format(channel_id)}}}}
 
@@ -31,7 +32,8 @@ def playlist_item(video_id):
 
 def video(video_id, duration='PT4M13S', **snippet):
     data = {'title': 'Title ' + video_id, 'description': 'About ' + video_id,
-            'channelTitle': 'Channel', 'publishedAt': '2026-10-14T16:00:07Z',
+            'channelId': 'UCchannel', 'channelTitle': 'Channel',
+            'publishedAt': '2026-10-14T16:00:07Z',
             'thumbnails': {'medium': {'url': 'https://i.ytimg.com/{}/mq.jpg'.format(video_id)},
                            'maxres': {'url': 'https://i.ytimg.com/{}/max.jpg'.format(video_id)}}}
     data.update(snippet)
@@ -46,19 +48,21 @@ class DataApiTestCase(unittest.TestCase):
 
     def setUp(self):
         self.requests = []
+        self.methods = []
         # Responses by resource, answered from front to back; videos are
         # answered from self.known_videos.
         self.responses = {}
         self.known_videos = {}
-        patcher = mock.patch.object(dataapi.http, 'get_json', self._get_json)
+        patcher = mock.patch.object(dataapi.http, 'request_json', self._request_json)
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def _get_json(self, url, headers):
+    def _request_json(self, method, url, headers, payload=None):
         parts = urlsplit(url)
         resource = parts.path.rsplit('/', 1)[-1]
         params = dict(parse_qsl(parts.query))
         self.requests.append((resource, params, headers))
+        self.methods.append((method, payload))
         if resource == 'videos':
             return {'items': [self.known_videos[video_id]
                               for video_id in params['id'].split(',')
@@ -78,8 +82,9 @@ class SubscriptionsTest(DataApiTestCase):
         ]
         channels = dataapi.subscriptions(token='access-user')
 
-        self.assertEqual([(channel.channel_id, channel.title) for channel in channels],
-                         [('UC1', 'Alpha'), ('UC2', 'Beta')])
+        self.assertEqual([(channel.channel_id, channel.title, channel.subscription_id)
+                          for channel in channels],
+                         [('UC1', 'Alpha', 'sub-UC1'), ('UC2', 'Beta', 'sub-UC2')])
         self.assertEqual([params.get('pageToken') for params in self.requested('subscriptions')],
                          [None, 'p2'])
 
@@ -104,6 +109,27 @@ class SubscriptionsTest(DataApiTestCase):
         with self.assertRaises(dataapi.DataApiError) as context:
             dataapi.subscriptions(token='t')
         self.assertEqual(str(context.exception), 'quotaExceeded')
+
+
+class SubscribeTest(DataApiTestCase):
+
+    def test_subscribing_posts_the_channel_and_returns_the_subscription(self):
+        self.responses['subscriptions'] = [{'id': 'sub-UC1', 'snippet': {}}]
+        self.assertEqual(dataapi.subscribe('UC1', token='t'), 'sub-UC1')
+        self.assertEqual(self.methods, [('POST', {'snippet': {'resourceId': {
+            'kind': 'youtube#channel', 'channelId': 'UC1'}}})])
+        self.assertEqual(self.requested('subscriptions'), [{'part': 'snippet'}])
+
+    def test_unsubscribing_deletes_the_subscription(self):
+        self.responses['subscriptions'] = [{}]
+        dataapi.unsubscribe('sub-UC1', token='t')
+        self.assertEqual(self.methods, [('DELETE', None)])
+        self.assertEqual(self.requested('subscriptions'), [{'id': 'sub-UC1'}])
+
+    def test_a_refused_change_is_an_error(self):
+        self.responses['subscriptions'] = [error('subscriptionForbidden')]
+        with self.assertRaises(dataapi.DataApiError):
+            dataapi.subscribe('UC1', token='t')
 
 
 class ChannelVideosTest(DataApiTestCase):
@@ -158,9 +184,10 @@ class VideoDetailsTest(DataApiTestCase):
 
     def test_the_metadata_is_taken_over(self):
         details = self.details(video('v1', tags=['a', 'b']))
-        self.assertEqual((details.title, details.description, details.channel_title,
-                          details.published, details.thumbnail, details.tags),
-                         ('Title v1', 'About v1', 'Channel', '2026-10-14T16:00:07Z',
+        self.assertEqual((details.title, details.description, details.channel_id,
+                          details.channel_title, details.published, details.thumbnail,
+                          details.tags),
+                         ('Title v1', 'About v1', 'UCchannel', 'Channel', '2026-10-14T16:00:07Z',
                           'https://i.ytimg.com/v1/max.jpg', ['a', 'b']))
 
     def test_durations_are_converted_to_seconds(self):

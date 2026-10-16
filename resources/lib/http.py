@@ -29,13 +29,18 @@ def post_json(url, payload, headers):
     return _fetch_json(request, url, error_body=False)
 
 
-def get_json(url, headers):
-    """GET url and return the decoded JSON response.
+def request_json(method, url, headers, payload=None):
+    """Send a request, with payload as JSON if given, and return the decoded JSON response.
 
     An error status with a JSON body is returned as well: the YouTube Data API
-    reports its errors that way.
+    reports its errors that way. A response without a body yields {}.
     """
-    return _fetch_json(Request(url, headers=headers), url, error_body=True)
+    data = None
+    if payload is not None:
+        data = json.dumps(payload).encode('utf-8')
+        headers = dict(headers, **{'Content-Type': 'application/json'})
+    return _fetch_json(Request(url, data=data, method=method, headers=headers), url,
+                       error_body=True)
 
 
 def post_form(url, fields):
@@ -52,7 +57,8 @@ def post_form(url, fields):
 def _fetch_json(request, url, error_body):
     try:
         with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-            return json.loads(response.read().decode('utf-8'))
+            body = response.read()
+            return json.loads(body.decode('utf-8')) if body else {}
     except HTTPError as error:
         if error_body:
             try:

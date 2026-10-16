@@ -61,3 +61,8 @@ def log_error(message):
 def notify(message, heading=None, time=5000):
     """Show a notification toast."""
     xbmcgui.Dialog().notification(heading or ADDON_NAME, message, ADDON_ICON, time)
+
+
+def confirm(message):
+    """Ask a yes/no question and return whether the answer was yes."""
+    return xbmcgui.Dialog().yesno(ADDON_NAME, message)

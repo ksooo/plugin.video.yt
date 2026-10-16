@@ -9,7 +9,8 @@ as folders in Kodi's video window.
 
 Under construction. Signed in, the add-on lists your subscriptions: below **Subscriptions** the
 channels, below each channel its 100 newest videos - those of the channel's **Videos** tab on
-YouTube, so neither shorts nor live recordings. Any video plays from
+YouTube, so neither shorts nor live recordings. A channel's context menu unsubscribes from it, a
+video's subscribes to or unsubscribes from its channel. Any video plays from
 `plugin://plugin.video.yt/play/?v=<video id>`.
 
 ## Requirements

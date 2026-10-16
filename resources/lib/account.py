@@ -26,6 +26,9 @@ from . import http
 from . import oauth
 
 TOKENS_FILE = 'tokens.json'
+#: Data of the account kept besides the tokens, see subscriptions.py. It goes
+#: when the account does.
+SUBSCRIPTIONS_FILE = 'subscriptions.json'
 
 #: Account keys used in the tokens file and by innertube.Client.account.
 USER = 'user'
@@ -157,8 +160,9 @@ def _save(tokens):
 
 
 def _forget():
-    try:
-        os.remove(addon.profile_path(TOKENS_FILE))
-    except FileNotFoundError:
-        pass
+    for file_name in (TOKENS_FILE, SUBSCRIPTIONS_FILE):
+        try:
+            os.remove(addon.profile_path(file_name))
+        except FileNotFoundError:
+            pass
     addon.set_bool_setting(addon.SETTING_SIGNED_IN, False)

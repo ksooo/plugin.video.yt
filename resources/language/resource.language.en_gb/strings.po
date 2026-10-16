@@ -150,3 +150,38 @@ msgstr ""
 msgctxt "#30200"
 msgid "Subscriptions"
 msgstr ""
+
+# context menu of a video
+msgctxt "#30201"
+msgid "Subscribe to channel"
+msgstr ""
+
+# context menu of a video
+msgctxt "#30202"
+msgid "Unsubscribe from channel"
+msgstr ""
+
+# context menu of a channel
+msgctxt "#30203"
+msgid "Unsubscribe"
+msgstr ""
+
+# context menu of a video
+msgctxt "#30204"
+msgid "Go to channel"
+msgstr ""
+
+# notification, {0} = channel
+msgctxt "#30210"
+msgid "Subscribed to {0}"
+msgstr ""
+
+# notification, {0} = channel
+msgctxt "#30211"
+msgid "Unsubscribed from {0}"
+msgstr ""
+
+# confirmation, {0} = channel
+msgctxt "#30212"
+msgid "Unsubscribe from {0}?"
+msgstr ""

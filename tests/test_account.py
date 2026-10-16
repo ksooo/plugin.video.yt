@@ -126,6 +126,14 @@ class SignOutTest(AccountTestCase):
         self.assertFalse(support.SETTINGS['signed_in'])
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30121')])
 
+    def test_the_cached_subscriptions_go_too(self):
+        support.store_tokens(user=tokens('user'), vr=tokens('vr'))
+        cache = os.path.join(support.PROFILE_DIR, account.SUBSCRIPTIONS_FILE)
+        with open(cache, 'w', encoding='utf-8') as cache_file:
+            cache_file.write('{}')
+        self.dispatch('signout')
+        self.assertFalse(os.path.exists(cache))
+
 
 class AccessTokenTest(AccountTestCase):
 

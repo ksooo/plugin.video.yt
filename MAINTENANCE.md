@@ -30,11 +30,24 @@ does not exist for a channel without a single such video.
 There is no "next page" entry: a channel shows its newest 100 videos and
 that's it.
 
+### Subscriptions in context menus
+
+Every video offers to subscribe to or unsubscribe from its channel, so every
+video listing needs to know the subscriptions. `subscriptions.py` caches them
+in the profile directory, as channel id to subscription id - unsubscribing
+takes the latter. Listing the subscriptions, subscribing and unsubscribing
+update the cache, otherwise it is fetched again after an hour. Signing out
+deletes it along with the tokens. After a change the listing is refreshed,
+since its context menus were built with the old state - except after
+unsubscribing within the channel's own listing: that one is left for the
+level above, which Kodi must not cache (`cacheToDisc=False`), so the channel
+is gone there.
+
 ## YouTube Data API
 
 `dataapi.py` wraps the calls; each notes its quota cost. A project gets
 10,000 units a day. Opening the subscriptions costs 1 unit per 50 channels,
-opening a channel 4 units. The API reports errors as JSON with a `reason`
+opening a channel 4 units, subscribing or unsubscribing 50. The API reports errors as JSON with a `reason`
 such as `quotaExceeded`, which the add-on turns into a notification.
 
 ## Signing in

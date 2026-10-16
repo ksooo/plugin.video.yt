@@ -23,10 +23,12 @@ API_URL = 'https://www.googleapis.com/youtube/v3/'
 #: The most items the API returns per request.
 PAGE_SIZE = 50
 
-Channel = collections.namedtuple('Channel', 'channel_id title thumbnail')
+#: A subscribed channel. Unsubscribing takes the subscription's id, not the channel's.
+Channel = collections.namedtuple('Channel', 'channel_id title thumbnail subscription_id')
 
 Video = collections.namedtuple(
-    'Video', 'video_id title description channel_title published duration thumbnail tags')
+    'Video',
+    'video_id title description channel_id channel_title published duration thumbnail tags')
 
 _THUMBNAIL_SIZES = ('maxres', 'standard', 'high', 'medium', 'default')
 
@@ -47,8 +49,20 @@ def subscriptions(token):
     }, token):
         snippet = item['snippet']
         channels.append(Channel(snippet['resourceId']['channelId'], snippet['title'],
-                                _thumbnail(snippet)))
+                                _thumbnail(snippet), item['id']))
     return channels
+
+
+def subscribe(channel_id, token):
+    """Subscribe to the channel and return the subscription's id. 50 units."""
+    return _request('POST', 'subscriptions', {'part': 'snippet'}, token, {
+        'snippet': {'resourceId': {'kind': 'youtube#channel', 'channelId': channel_id}},
+    })['id']
+
+
+def unsubscribe(subscription_id, token):
+    """End the subscription. 50 units."""
+    _request('DELETE', 'subscriptions', {'id': subscription_id}, token)
 
 
 def channel_videos(channel_id, count, token):
@@ -82,7 +96,7 @@ def videos(video_ids, token):
     """
     details = {}
     for start in range(0, len(video_ids), PAGE_SIZE):
-        response = _get('videos', {
+        response = _request('GET', 'videos', {
             'part': 'snippet,contentDetails',
             'id': ','.join(video_ids[start:start + PAGE_SIZE]),
             'maxResults': PAGE_SIZE,
@@ -100,7 +114,7 @@ def _all_items(resource, params, token, limit=None):
         page_params = dict(params, maxResults=PAGE_SIZE)
         if page_token:
             page_params['pageToken'] = page_token
-        response = _get(resource, page_params, token)
+        response = _request('GET', resource, page_params, token)
 
         for item in response.get('items', []):
             if limit is not None and count >= limit:
@@ -113,9 +127,9 @@ def _all_items(resource, params, token, limit=None):
             return
 
 
-def _get(resource, params, token):
-    response = http.get_json('{}{}?{}'.format(API_URL, resource, urlencode(params)),
-                             {'Authorization': 'Bearer ' + token})
+def _request(method, resource, params, token, payload=None):
+    response = http.request_json(method, '{}{}?{}'.format(API_URL, resource, urlencode(params)),
+                                 {'Authorization': 'Bearer ' + token}, payload)
     error = response.get('error')
     if error is not None:
         errors = error.get('errors') or [{}]
@@ -129,6 +143,7 @@ def _video(item):
         video_id=item['id'],
         title=snippet.get('title', ''),
         description=snippet.get('description', ''),
+        channel_id=snippet.get('channelId', ''),
         channel_title=snippet.get('channelTitle', ''),
         published=snippet.get('publishedAt', ''),
         duration=_seconds(item.get('contentDetails', {}).get('duration', '')),

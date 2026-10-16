@@ -23,6 +23,9 @@ import unittest
 
 LOG = []
 NOTIFICATIONS = []
+BUILTINS = []
+CONFIRMATIONS = []
+CONFIRM_ANSWER = [True]
 PLUGIN_ITEMS = []
 PLUGIN_STATE = {}
 INFO_LABELS = {}
@@ -53,6 +56,7 @@ def _make_module(name):
 xbmc = _make_module('xbmc')
 xbmc.LOGDEBUG, xbmc.LOGINFO, xbmc.LOGWARNING, xbmc.LOGERROR = 0, 1, 2, 3
 xbmc.log = lambda message, level=0: LOG.append((level, message))
+xbmc.executebuiltin = lambda command: BUILTINS.append(command)
 xbmc.ISO_639_1 = 0
 xbmc.getLanguage = lambda format=0, region=False: LANGUAGE[0]
 xbmc.getInfoLabel = lambda label: INFO_LABELS.get(label, '')
@@ -138,6 +142,10 @@ class ListItem:
         self.art = {}
         self.date_time = None
         self.info_tag = InfoTagVideo()
+        self.context_menu = []
+
+    def addContextMenuItems(self, items, replaceItems=False):
+        self.context_menu.extend(items)
 
     def setIsFolder(self, is_folder):
         self.is_folder = is_folder
@@ -164,6 +172,10 @@ class ListItem:
 class Dialog:
     def notification(self, heading, message, icon=None, time=5000, sound=True):
         NOTIFICATIONS.append((heading, message))
+
+    def yesno(self, heading, message, *args, **kwargs):
+        CONFIRMATIONS.append((heading, message))
+        return CONFIRM_ANSWER[0]
 
 
 class DialogProgress:
@@ -220,7 +232,7 @@ xbmcplugin.addSortMethod = (
 
 
 def reset_output():
-    del LOG[:], NOTIFICATIONS[:], PLUGIN_ITEMS[:]
+    del LOG[:], NOTIFICATIONS[:], PLUGIN_ITEMS[:], BUILTINS[:], CONFIRMATIONS[:]
     PLUGIN_STATE.clear()
 
 
@@ -229,6 +241,7 @@ def reset():
     INFO_LABELS.clear()
     LANGUAGE[0] = 'de'
     ABORT_REQUESTED[0] = False
+    CONFIRM_ANSWER[0] = True
     SETTINGS.clear()
     SETTINGS.update(DEFAULT_SETTINGS)
     del PROGRESS[:]

@@ -13,6 +13,8 @@ from urllib.parse import urlencode
 import xbmcgui
 import xbmcplugin
 
+from . import addon
+
 BASE_URL = 'plugin://plugin.video.yt/'
 
 #: Separator between the breadcrumb parts, matching the one Kodi puts between
@@ -42,7 +44,7 @@ def breadcrumb(*parts):
     return BREADCRUMB_SEPARATOR.join(parts)
 
 
-def folder_item(label, route, thumbnail='', **params):
+def folder_item(label, route, thumbnail='', context_menu=(), **params):
     """Build the listing tuple of a folder."""
     list_item = xbmcgui.ListItem(label=label, offscreen=True)
     list_item.setIsFolder(True)
@@ -50,12 +52,37 @@ def folder_item(label, route, thumbnail='', **params):
         list_item.setArt({'thumb': thumbnail, 'icon': thumbnail})
     else:
         list_item.setArt({'icon': 'DefaultFolder.png'})
+    if context_menu:
+        list_item.addContextMenuItems(list(context_menu))
     return url(route, **params), list_item, True
 
 
-def video_item(video):
-    """Build the listing tuple of a playable video."""
+def channel_item(channel):
+    """Build the listing tuple of a subscribed channel."""
+    return folder_item(channel.title, 'channel', channel.thumbnail,
+                       context_menu=[_unsubscribe_entry(30203, channel.channel_id,
+                                                        channel.title)],
+                       id=channel.channel_id, title=channel.title)
+
+
+def video_item(video, subscribed, link_channel):
+    """Build the listing tuple of a playable video.
+
+    subscribed tells whether the account subscribed to the video's channel,
+    link_channel whether to offer going there.
+    """
+    context_menu = []
+    if link_channel:
+        context_menu.append((addon.localize(30204), 'Container.Update({})'.format(
+            url('channel', id=video.channel_id, title=video.channel_title))))
+    if subscribed:
+        context_menu.append(_unsubscribe_entry(30202, video.channel_id, video.channel_title))
+    else:
+        context_menu.append((addon.localize(30201), 'RunPlugin({})'.format(
+            url('subscribe', channel=video.channel_id, title=video.channel_title))))
+
     list_item = xbmcgui.ListItem(label=video.title, offscreen=True)
+    list_item.addContextMenuItems(context_menu)
     list_item.setIsFolder(False)
     list_item.setProperty('IsPlayable', 'true')
     list_item.setArt({'thumb': video.thumbnail, 'icon': video.thumbnail,
@@ -77,13 +104,21 @@ def video_item(video):
     return url('play', v=video.video_id), list_item, False
 
 
-def finish_folders(handle, items, category):
-    """Hand a listing of folders over to Kodi."""
+def _unsubscribe_entry(label_id, channel_id, channel_title):
+    return addon.localize(label_id), 'RunPlugin({})'.format(
+        url('unsubscribe', channel=channel_id, title=channel_title))
+
+
+def finish_folders(handle, items, category, cache=True):
+    """Hand a listing of folders over to Kodi.
+
+    Without cache, Kodi fetches the listing anew even when going back to it.
+    """
     xbmcplugin.setPluginCategory(handle, category)
     xbmcplugin.addDirectoryItems(handle, items, len(items))
     xbmcplugin.addSortMethod(handle, xbmcplugin.SORT_METHOD_UNSORTED)
     xbmcplugin.addSortMethod(handle, xbmcplugin.SORT_METHOD_LABEL)
-    xbmcplugin.endOfDirectory(handle)
+    xbmcplugin.endOfDirectory(handle, cacheToDisc=cache)
 
 
 def finish_videos(handle, items, category):
