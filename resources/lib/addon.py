@@ -28,6 +28,7 @@ SETTING_CLIENT_ID = 'client_id'
 SETTING_CLIENT_SECRET = 'client_secret'
 SETTING_SIGNED_IN = 'signed_in'
 SETTING_VIDEO_CODECS = 'video_codecs'
+SETTING_SYNC_ACCOUNT = 'sync_account'
 
 
 def localize(string_id):
@@ -53,6 +54,11 @@ def ask_text(heading):
 def get_string_setting(setting_id):
     """Return the value of a text setting, stripped of stray whitespace."""
     return ADDON.getSettings().getString(setting_id).strip()
+
+
+def get_bool_setting(setting_id):
+    """Return whether a boolean setting is on."""
+    return ADDON.getSettings().getBool(setting_id)
 
 
 def get_string_list_setting(setting_id):

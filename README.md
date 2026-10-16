@@ -18,8 +18,8 @@ Under construction. The top level offers:
   for in the region are left out.
 * **Search**: a new search, and the 20 recent searches to run again or delete. YouTube searches
   by relevance, in the region and language set in Kodi.
-* **History**, when signed in: the videos watched last on YouTube, the latest first. Videos
-  watched in Kodi do not show up there; the add-on does not report to YouTube what it plays.
+* **History**, when signed in: the videos watched last on YouTube, the latest first - and in Kodi,
+  see [Syncing with YouTube](#syncing-with-youtube).
 
 Trending and search work with just the API key, without signing in.
 
@@ -40,6 +40,23 @@ display allow. Kodi's own dialogues switch between:
 * **Subtitles**: the subtitles made for the video, and those YouTube recognized from the speech.
 
 Kodi remembers where you stopped and which videos you watched, as for any other video.
+
+## Syncing with YouTube
+
+When signed in, the setting **Playback ▸ Sync with YouTube account**, on by default, keeps Kodi
+and the account's watch history in step:
+
+* Videos played in Kodi go to the history, along with where they were stopped. Live streams do
+  not.
+* Videos in the history resume where they were left, wherever they were watched, and count as
+  watched from 90 percent on. That holds for the videos watched last - the first page of the
+  history; for older ones, what Kodi remembers holds.
+
+YouTube only ever moves a position forward. Starting a video over and stopping it earlier leaves
+the history, and so the resume point, where it was; a video watched to the end stays watched
+until it is deleted from the history on YouTube. Kodi's context menu entries to mark a video
+watched or unwatched or to reset its resume point do not reach YouTube: for a video in the
+history, the history wins again the next time the folder is listed.
 
 ## Requirements
 

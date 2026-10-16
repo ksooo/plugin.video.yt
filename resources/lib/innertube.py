@@ -153,6 +153,49 @@ def get_shelves(browse_id, language, region, access_token):
     Only the first page is fetched. access_token is the token of the account
     ANDROID_VR accepts.
     """
+    shelves = []
+    for section in _browse(browse_id, language, region, access_token):
+        shelf = _shelf(section)
+        if shelf is not None:
+            shelves.append(shelf)
+    return shelves
+
+
+def get_watch_progress(language, region, access_token):
+    """Return how many percent of each video in the account's watch history were watched.
+
+    Only the first page of the history is fetched; of a video watched more
+    than once, the latest viewing counts. access_token is the token of the
+    account ANDROID_VR accepts.
+    """
+    progress = {}
+    for section in _browse(HISTORY, language, region, access_token):
+        for video in _videos(_section_content(section)[1]):
+            percent = _percent_watched(video)
+            if percent is not None:
+                progress.setdefault(video['videoId'], percent)
+    return progress
+
+
+def get_playback_tracking(video_id, language, region, access_token):
+    """Return the URLs that report playing the video to the account's watch history.
+
+    None if YouTube refuses the video. access_token is the token of the account
+    ANDROID_VR accepts; the URLs only work with it.
+    """
+    response = _request_player(ANDROID_VR, video_id, language, region, access_token)
+    if not _is_playable(response, video_id):
+        return None
+    return response.get('playbackTracking')
+
+
+def new_cpn():
+    """Return a new client playback nonce, the id YouTube's apps give each playback."""
+    return ''.join(random.choice(_CPN_ALPHABET) for _ in range(16))
+
+
+def _browse(browse_id, language, region, access_token):
+    """Return the sections of the first page of one of the signed-in account's feeds."""
     client = ANDROID_VR
     headers = dict(client.api_headers, Authorization='Bearer ' + access_token)
     response = http.post_json(BROWSE_URL, {
@@ -160,32 +203,47 @@ def get_shelves(browse_id, language, region, access_token):
         'browseId': browse_id,
     }, headers)
 
-    shelves = []
+    sections = []
     for tab in response.get('contents', {}).get('singleColumnBrowseResultsRenderer', {}).get(
             'tabs', []):
-        sections = tab.get('tabRenderer', {}).get('content', {}).get('sectionListRenderer', {})
-        for section in sections.get('contents', []):
-            shelf = _shelf(section)
-            if shelf is not None:
-                shelves.append(shelf)
-    return shelves
+        sections.extend(tab.get('tabRenderer', {}).get('content', {}).get(
+            'sectionListRenderer', {}).get('contents', []))
+    return sections
+
+
+def _section_content(section):
+    """Return the renderer of a section of a browse response and the section's items."""
+    if 'shelfRenderer' in section:
+        renderer = section['shelfRenderer']
+        content = renderer.get('content', {})
+        return renderer, (content.get('verticalListRenderer')
+                          or content.get('horizontalListRenderer') or {}).get('items', [])
+    if 'itemSectionRenderer' in section:
+        renderer = section['itemSectionRenderer']
+        return renderer, renderer.get('contents', [])
+    return {}, []
+
+
+def _videos(items):
+    """Return the renderers of the videos among the items of a section."""
+    return [item['compactVideoRenderer'] for item in items
+            if 'videoId' in item.get('compactVideoRenderer', {})]
+
+
+def _percent_watched(video):
+    """Return how many percent of a video were watched, from its renderer; None if not given."""
+    for overlay in video.get('thumbnailOverlays', []):
+        percent = overlay.get('thumbnailOverlayResumePlaybackRenderer', {}).get(
+            'percentDurationWatched')
+        if percent is not None:
+            return percent
+    return None
 
 
 def _shelf(section):
     """Return the shelf of a section of a browse response, None if it holds no video."""
-    if 'shelfRenderer' in section:
-        renderer = section['shelfRenderer']
-        content = renderer.get('content', {})
-        items = (content.get('verticalListRenderer') or content.get('horizontalListRenderer')
-                 or {}).get('items', [])
-    elif 'itemSectionRenderer' in section:
-        renderer = section['itemSectionRenderer']
-        items = renderer.get('contents', [])
-    else:
-        return None
-
-    video_ids = [item['compactVideoRenderer']['videoId'] for item in items
-                 if 'videoId' in item.get('compactVideoRenderer', {})]
+    renderer, items = _section_content(section)
+    video_ids = [video['videoId'] for video in _videos(items)]
     if not video_ids:
         return None
     return Shelf(text(renderer.get('title')), video_ids)
@@ -226,7 +284,7 @@ def _request_player(client, video_id, language, region, token, visitor_data=None
     }
     if client.params:
         payload['params'] = client.params
-        payload['cpn'] = ''.join(random.choice(_CPN_ALPHABET) for _ in range(16))
+        payload['cpn'] = new_cpn()
 
     return http.post_json(PLAYER_URL, payload, headers)
 

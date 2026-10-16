@@ -105,8 +105,10 @@ class Router:
         category = title
         if self._params.get('parent') == 'subscriptions':
             category = listing.breadcrumb(addon.localize(30200), title)
+        progress = self._watch_progress()
         listing.finish_videos(self._handle,
-                              [listing.video_item(video, subscribed, link_channel=False)
+                              [listing.video_item(video, subscribed, link_channel=False,
+                                                  percent_watched=progress.get(video.video_id))
                                for video in videos],
                               category)
 
@@ -232,12 +234,26 @@ class Router:
             self._fail(addon.localize(nothing_found_label_id), listing_route=True)
             return
 
+        progress = self._watch_progress()
         listing.finish_videos(self._handle,
                               [listing.video_item(video,
                                                   None if ids is None else video.channel_id in ids,
-                                                  link_channel=True)
+                                                  link_channel=True,
+                                                  percent_watched=progress.get(video.video_id))
                                for video in videos],
                               category)
+
+    @staticmethod
+    def _watch_progress():
+        """Return how far the account watched the videos of its history, empty if not syncing."""
+        access_token = account.sync_token()
+        if access_token is None:
+            return {}
+        try:
+            return feeds.watch_progress(access_token)
+        except http.RequestError as error:
+            addon.log_error(str(error))
+            return {}
 
     # -- actions ------------------------------------------------------------
 

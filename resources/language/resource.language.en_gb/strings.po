@@ -77,6 +77,16 @@ msgid "Sign out of YouTube and revoke the add-on's access to the account."
 msgstr ""
 
 # settings label
+msgctxt "#30022"
+msgid "Sync with YouTube account"
+msgstr ""
+
+# settings help
+msgctxt "#30023"
+msgid "Videos played in Kodi go to the account's watch history, along with where they were stopped. Videos watched elsewhere resume where they were left there, and count as watched from 90 percent on. Needs signing in."
+msgstr ""
+
+# settings label
 msgctxt "#30030"
 msgid "Video codecs"
 msgstr ""

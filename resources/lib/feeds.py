@@ -15,6 +15,9 @@ The recommendations come in shelves that change with every request and have
 no id of their own. The shelves last listed are therefore kept for
 SHELVES_MAX_AGE_SECONDS in Kodi's temp directory, so that opening one shows
 what the list of shelves promised. A shelf is found by its title.
+
+How far the account watched the videos of its history is kept for
+PROGRESS_MAX_AGE_SECONDS as well, since every video listing needs it.
 """
 
 import time
@@ -24,6 +27,9 @@ from . import innertube
 
 SHELVES_FILE = 'recommendations.json'
 SHELVES_MAX_AGE_SECONDS = 15 * 60
+
+PROGRESS_FILE = 'watch-progress.json'
+PROGRESS_MAX_AGE_SECONDS = 5 * 60
 
 
 def recommendation_shelves(access_token):
@@ -51,3 +57,28 @@ def history(access_token):
                                        access_token):
         video_ids.extend(video_id for video_id in shelf.video_ids if video_id not in video_ids)
     return video_ids
+
+
+def watch_progress(access_token):
+    """Return how many percent of each video in the watch history the account watched."""
+    path = addon.temp_path(PROGRESS_FILE)
+    cache = addon.load_json(path, None)
+    if cache is not None and time.time() - cache['saved_at'] < PROGRESS_MAX_AGE_SECONDS:
+        return cache['progress']
+
+    progress = innertube.get_watch_progress(addon.language(), addon.region(), access_token)
+    addon.save_json(path, {'saved_at': time.time(), 'progress': progress})
+    return progress
+
+
+def watched(video_id, percent):
+    """Note how far the video was just watched in Kodi, before YouTube's history shows it.
+
+    YouTube keeps the furthest position reported, and so does this.
+    """
+    path = addon.temp_path(PROGRESS_FILE)
+    cache = addon.load_json(path, None)
+    if cache is not None:
+        progress = cache['progress']
+        progress[video_id] = max(percent, progress.get(video_id, 0))
+        addon.save_json(path, cache)

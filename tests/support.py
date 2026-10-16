@@ -38,11 +38,16 @@ DEFAULT_SETTINGS = {
     'client_secret': '',
     'signed_in': False,
     'video_codecs': ['vp9', 'avc1'],
+    'sync_account': True,
 }
 SETTINGS = dict(DEFAULT_SETTINGS)
 #: Progress dialogue events, and whether the user pressed cancel.
 PROGRESS = []
 PROGRESS_CANCELED = [False]
+#: What Kodi plays, second by second: (file, position, paused), or None for
+#: nothing. Every waitForAbort() moves on to the next second; after the last
+#: one, Kodi plays nothing.
+PLAYBACK = []
 
 PROFILE_DIR = os.path.join(tempfile.gettempdir(), 'plugin.video.yt-test-profile')
 
@@ -69,10 +74,30 @@ class Monitor:
         return ABORT_REQUESTED[0]
 
     def waitForAbort(self, timeout=None):
+        if PLAYBACK:
+            PLAYBACK.pop(0)
         return ABORT_REQUESTED[0]
 
 
+def _playing():
+    if not PLAYBACK or PLAYBACK[0] is None:
+        raise RuntimeError('Kodi is not playing any file')
+    return PLAYBACK[0]
+
+
+class Player:
+    def getPlayingFile(self):
+        return _playing()[0]
+
+    def getTime(self):
+        return _playing()[1]
+
+
 xbmc.Monitor = Monitor
+xbmc.Player = Player
+xbmc.getCondVisibility = lambda condition: (condition == 'Player.Paused'
+                                            and bool(PLAYBACK) and PLAYBACK[0] is not None
+                                            and PLAYBACK[0][2])
 
 # -- xbmcaddon ----------------------------------------------------------------
 
@@ -86,6 +111,9 @@ class Settings:
         return SETTINGS[setting_id]
 
     def getStringList(self, setting_id):
+        return SETTINGS[setting_id]
+
+    def getBool(self, setting_id):
         return SETTINGS[setting_id]
 
     def setBool(self, setting_id, value):
@@ -259,6 +287,7 @@ def reset():
     SETTINGS.update(DEFAULT_SETTINGS)
     del PROGRESS[:]
     PROGRESS_CANCELED[0] = False
+    del PLAYBACK[:]
     shutil.rmtree(PROFILE_DIR, ignore_errors=True)
 
 

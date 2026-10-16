@@ -8,9 +8,11 @@
 #
 """Tests for resources.lib.playback, driven through the play route."""
 
+import time
 import xml.etree.ElementTree as ElementTree
 from unittest import mock
 from urllib.parse import parse_qs
+from urllib.parse import urlsplit
 
 # Importing support installs the xbmc* stubs, so it has to come first.
 from tests import support
@@ -19,11 +21,20 @@ from tests.support import VP9_1080
 from tests.support import VP9_HDR_1080
 from tests.support import OPUS
 from tests.support import player_response
+from tests.support import tokens
 
 from resources.lib import account
+from resources.lib import addon
+from resources.lib import feeds
 from resources.lib import http
 from resources.lib import innertube
 from resources.lib import playback
+from resources.lib import watchtime
+
+MANIFEST_URL = 'http://127.0.0.1:12345/manifest.mpd'
+
+TRACKING = {'videostatsPlaybackUrl': {'baseUrl': 'https://s.youtube.com/api/stats/playback?a=1'},
+            'videostatsWatchtimeUrl': {'baseUrl': 'https://s.youtube.com/api/stats/watchtime?a=1'}}
 
 
 class FakeManifestServer:
@@ -33,7 +44,7 @@ class FakeManifestServer:
 
     def __init__(self, manifest):
         self.manifest = manifest
-        self.url = 'http://127.0.0.1:12345/manifest.mpd'
+        self.url = MANIFEST_URL
         self.served = None
         FakeManifestServer.instances.append(self)
 
@@ -47,6 +58,7 @@ class PlaybackTestCase(AddonTestCase):
     def setUp(self):
         super().setUp()
         self.response = player_response('abc')
+        self.client = innertube.ANDROID_VR
         self.player_requests = []
         FakeManifestServer.instances = []
         for patcher in (mock.patch.object(innertube, 'get_player', self._get_player),
@@ -59,7 +71,7 @@ class PlaybackTestCase(AddonTestCase):
         self.access_token = access_token
         if isinstance(self.response, Exception):
             raise self.response
-        return innertube.Player(self.response, innertube.ANDROID_VR)
+        return innertube.Player(self.response, self.client)
 
     def play(self, video_id='abc'):
         self.dispatch('play', '?v=' + video_id)
@@ -189,3 +201,137 @@ class FailureTest(PlaybackTestCase):
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30101')])
         self.assertEqual(self.errors(),
                          ['[plugin.video.yt] timed out from https://www.youtube.com/'])
+
+
+class SyncTest(PlaybackTestCase):
+
+    def setUp(self):
+        super().setUp()
+        support.store_tokens(user=tokens('user'), vr=tokens('vr'))
+        self.response['playbackTracking'] = TRACKING
+        self.reports = []
+        self.report_failure = None
+        self.tracking_requests = []
+        for patcher in (mock.patch.object(watchtime.http, 'request_json', self._request_json),
+                        mock.patch.object(innertube, 'get_playback_tracking',
+                                          self._get_playback_tracking)):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def _request_json(self, method, url, headers, payload=None):
+        self.reports.append((method, url, headers))
+        if self.report_failure is not None:
+            raise self.report_failure
+        return {}
+
+    def _get_playback_tracking(self, video_id, language, region, access_token):
+        self.tracking_requests.append((video_id, access_token))
+        return TRACKING
+
+    @staticmethod
+    def watch(seconds, start=0, paused=()):
+        """Have Kodi play the manifest from start for the seconds given, then stop."""
+        support.PLAYBACK[:] = [(MANIFEST_URL, start + second, second in paused)
+                               for second in range(seconds + 1)]
+
+    def reported(self):
+        """Return the reports sent as (state, start, end); all None for the start's."""
+        reports = []
+        for _, url, _ in self.reports:
+            params = {key: values[0] for key, values in parse_qs(urlsplit(url).query).items()}
+            reports.append((params.get('state'), params.get('st'), params.get('et')))
+        return reports
+
+    def test_playback_is_reported_at_the_start_every_ten_seconds_and_at_the_end(self):
+        self.watch(25)
+        self.play()
+        self.assertEqual(self.reported(), [(None, None, None),
+                                           ('playing', '0.000', '10.000'),
+                                           ('playing', '10.000', '20.000'),
+                                           ('stopped', '20.000', '25.000')])
+
+    def test_reports_go_to_the_tracking_urls_as_the_signed_in_vr_app(self):
+        self.watch(10)
+        self.play()
+        urls = [urlsplit(url) for _, url, _ in self.reports]
+        self.assertEqual([url.path for url in urls],
+                         ['/api/stats/playback', '/api/stats/watchtime', '/api/stats/watchtime'])
+        nonces = {parse_qs(url.query)['cpn'][0] for url in urls}
+        self.assertEqual(len(nonces), 1)
+        for method, _, headers in self.reports:
+            self.assertEqual((method, headers),
+                             ('GET', dict(innertube.ANDROID_VR.stream_headers,
+                                          Authorization='Bearer access-vr')))
+
+    def test_a_pause_is_reported(self):
+        self.watch(12, paused=(10, 11, 12))
+        self.play()
+        self.assertEqual(self.reported()[1], ('paused', '0.000', '10.000'))
+
+    def test_a_resumed_video_is_reported_from_where_it_resumed(self):
+        self.watch(5, start=100)
+        self.play()
+        self.assertEqual(self.reported()[-1], ('stopped', '100.000', '105.000'))
+
+    def test_when_the_vr_app_served_the_video_its_urls_are_taken(self):
+        self.watch(1)
+        self.play()
+        self.assertEqual(self.tracking_requests, [])
+
+    def test_when_android_served_the_video_the_vr_app_is_asked_for_the_urls(self):
+        self.client = innertube.ANDROID
+        self.watch(1)
+        self.play()
+        self.assertEqual(self.tracking_requests, [('abc', 'access-vr')])
+        self.assertEqual(len(self.reports), 2)
+
+    def test_without_the_setting_nothing_is_reported(self):
+        support.SETTINGS['sync_account'] = False
+        self.watch(25)
+        self.play()
+        self.assertEqual(self.reports, [])
+
+    def test_without_sign_in_nothing_is_reported(self):
+        support.reset()
+        self.client = innertube.ANDROID
+        self.watch(25)
+        self.play()
+        self.assertEqual((self.reports, self.tracking_requests), ([], []))
+
+    def test_live_streams_are_not_reported(self):
+        self.response = player_response('abc', formats=(), isLive=True,
+                                        playbackTracking=TRACKING)
+        self.response['streamingData']['hlsManifestUrl'] = 'https://manifest.googlevideo.com/x'
+        self.watch(25)
+        self.play()
+        self.assertEqual(self.reports, [])
+
+    def test_a_playback_that_never_starts_is_not_reported(self):
+        self.play()
+        self.assertEqual(self.reports, [])
+
+    def test_playing_something_else_ends_the_playback(self):
+        support.PLAYBACK[:] = [(MANIFEST_URL, 0, False), (MANIFEST_URL, 1, False),
+                               ('http://127.0.0.1:23456/manifest.mpd', 0, False)]
+        self.play()
+        self.assertEqual(self.reported()[-1], ('stopped', '0.000', '1.000'))
+
+    def test_shutting_down_kodi_sends_no_more_reports(self):
+        self.watch(25)
+        support.ABORT_REQUESTED[0] = True
+        self.play()
+        self.assertEqual(self.reported(), [(None, None, None)])
+
+    def test_failing_reports_are_logged_and_reporting_goes_on(self):
+        self.report_failure = http.RequestError('HTTP 500 from https://s.youtube.com/')
+        self.watch(10)
+        self.play()
+        self.assertEqual(len(self.reports), 3)
+        self.assertEqual(len(self.errors()), 3)
+
+    def test_where_playback_stopped_shows_in_the_listings_at_once(self):
+        addon.save_json(addon.temp_path(feeds.PROGRESS_FILE),
+                        {'saved_at': time.time(), 'progress': {}})
+        self.watch(106)
+        self.play()
+        self.assertEqual(feeds.watch_progress('access-vr'), {'abc': 50})

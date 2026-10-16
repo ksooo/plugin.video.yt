@@ -19,8 +19,9 @@ Two things make that work:
   part of a plugin URL with a trailing slash (`AddPath`), but
   `GetPlayCounts` looks it up as it comes. Without the slash, resuming works
   but listings never show a resume point or play count.
-* `listing.video_item()` never sets a play count or resume point. Kodi only
-  fills in what the item leaves unset.
+* `listing.video_item()` sets a play count and resume point only for videos
+  of the account's watch history, when syncing. Kodi only fills in what the
+  item leaves unset - the resume point while its total time is 0.
 
 Channels list the videos of their **Videos** tab on YouTube. YouTube keeps
 those in a playlist of its own: `UULF` followed by the channel id without its
@@ -170,6 +171,33 @@ The recommendations change with every request and their shelves have no id.
 `feeds.py` keeps the shelves last listed for 15 minutes in Kodi's temp
 directory and opens a shelf by its title from there, so it shows what the
 list promised.
+
+### Syncing with the watch history
+
+With the setting `sync_account` on and a sign-in, the add-on syncs both ways:
+
+* **Kodi to YouTube**: the plugin call that resolved a video stays alive
+  while Kodi plays it (`watchtime.py`) and reports to the URLs of the player
+  response's `playbackTracking`, as the apps do: `videostatsPlaybackUrl`
+  once at the start, `videostatsWatchtimeUrl` every 10 seconds and when
+  playback stops, with the time watched since the last report (`st`, `et`)
+  and the player's `state`. The URLs belong to the account only in a
+  signed-in player response, and only the Quest app is asked signed in; so
+  when `ANDROID` served the video, `innertube.get_playback_tracking()` asks
+  the Quest app for them. Live streams are not reported.
+* **YouTube to Kodi**: `innertube.get_watch_progress()` takes the
+  `percentDurationWatched` of the first page of `FEhistory`; every video
+  listing sets play count and resume point of the videos found there, from
+  90 percent on as watched. `feeds.py` keeps the progress for 5 minutes;
+  when playback in Kodi stops, the position goes into that cache too, since
+  YouTube's history takes a moment to show it.
+
+YouTube keeps the furthest position ever reported; reporting a smaller one,
+even 0, changes nothing. Only "Remove from watch history" (a
+`feedbackEndpoint` in the menu of a history entry) undoes a position. Kodi
+tells no add-on when its context menu marks a plugin item watched or
+unwatched or resets its resume point (`CVideoDatabase::SetPlayCount`
+announces library items only), so these do not reach YouTube.
 
 ### The manifest
 

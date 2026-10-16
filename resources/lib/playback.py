@@ -16,9 +16,11 @@ import xbmcplugin
 
 from . import account
 from . import addon
+from . import feeds
 from . import http
 from . import innertube
 from . import manifest
+from . import watchtime
 from .manifestserver import ManifestServer
 
 #: ISA fetches the manifest right after the URL is resolved.
@@ -50,8 +52,10 @@ def play(handle, video_id):
     else:
         captions = player.response.get('captions', {}).get(
             'playerCaptionsTracklistRenderer', {}).get('captionTracks', [])
-        _play_video(handle, video_id, streaming_data.get('adaptiveFormats', []), captions,
-                    headers)
+        url = _play_video(handle, video_id, streaming_data.get('adaptiveFormats', []),
+                          captions, headers)
+        if url is not None:
+            _sync(player, video_id, url)
 
 
 def _play_live(handle, hls_url, headers):
@@ -65,19 +69,48 @@ def _play_live(handle, hls_url, headers):
 
 
 def _play_video(handle, video_id, formats, captions, headers):
+    """Hand the video to Kodi. Returns the URL Kodi plays it from, None if that failed."""
     mpd = manifest.build(formats, captions,
                          addon.get_string_list_setting(addon.SETTING_VIDEO_CODECS),
                          prefer_hdr=bool(xbmc.getInfoLabel('System.SupportedHDRTypes')))
     if mpd is None:
         addon.log('{} has no usable formats'.format(video_id))
         _fail(handle, addon.localize(30100))
-        return
+        return None
 
     server = ManifestServer(mpd)
     xbmcplugin.setResolvedUrl(handle, True,
                               _make_list_item(server.url, 'application/dash+xml', headers))
     if not server.serve(MANIFEST_TIMEOUT_SECONDS, xbmc.Monitor().abortRequested):
         addon.log_error('manifest of {} was never fetched'.format(video_id))
+        return None
+    return server.url
+
+
+def _sync(player, video_id, url):
+    """Report the playback to the account's watch history while it lasts, if syncing."""
+    token = account.sync_token()
+    if token is None:
+        return
+
+    if player.client is innertube.ANDROID_VR:
+        # Asked signed in, so the URLs are the account's already.
+        tracking = player.response.get('playbackTracking')
+    else:
+        try:
+            tracking = innertube.get_playback_tracking(video_id, addon.language(),
+                                                       addon.region(), token)
+        except http.RequestError as error:
+            addon.log_error(str(error))
+            return
+    if not tracking:
+        addon.log('{} cannot be reported to the watch history'.format(video_id))
+        return
+
+    position = watchtime.follow(url, tracking)
+    length = int(player.response['videoDetails'].get('lengthSeconds', 0))
+    if position is not None and length:
+        feeds.watched(video_id, min(100, round(position * 100 / length)))
 
 
 def _make_list_item(url, mime_type, headers):

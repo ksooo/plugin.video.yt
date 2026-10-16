@@ -24,6 +24,9 @@ BREADCRUMB_SEPARATOR = ' / '
 
 CONTENT_VIDEOS = 'videos'
 
+#: From how many percent on a video counts as watched.
+WATCHED_PERCENT = 90
+
 #: Emojis and blanks at the start of a title. Kodi renders a label starting
 #: with an emoji blank, while other emojis merely show as boxes. Covered are
 #: the emoji blocks, the symbols and dingbats YouTube titles use as emojis,
@@ -99,12 +102,14 @@ def channel_item(channel):
                        id=channel.channel_id, title=channel.title, parent='subscriptions')
 
 
-def video_item(video, subscribed, link_channel):
+def video_item(video, subscribed, link_channel, percent_watched=None):
     """Build the listing tuple of a playable video.
 
     subscribed tells whether the account subscribed to the video's channel,
     None if nobody is signed in. link_channel tells whether to offer going to
-    the channel.
+    the channel. percent_watched, how far the account watched the video on
+    YouTube, overrides the play count and resume point Kodi keeps; None leaves
+    those to Kodi.
     """
     context_menu = []
     if link_channel:
@@ -139,6 +144,12 @@ def video_item(video, subscribed, link_channel):
     info_tag.setDuration(video.duration)
     info_tag.setTags(video.tags)
     info_tag.setUniqueIDs({'youtube': video.video_id}, 'youtube')
+    if percent_watched is not None:
+        watched = percent_watched >= WATCHED_PERCENT
+        info_tag.setPlaycount(1 if watched else 0)
+        # Kodi only fills in a resume point of its own while the total time is 0.
+        info_tag.setResumePoint(0 if watched else video.duration * percent_watched / 100,
+                                video.duration)
 
     return url('play', v=video.video_id), list_item, False
 

@@ -92,6 +92,11 @@
             <multiselect>true</multiselect>
           </control>
         </setting>
+        <setting id="sync_account" type="boolean" label="30022" help="30023">
+          <level>0</level>
+          <default>true</default>
+          <control type="toggle"/>
+        </setting>
       </group>
     </category>
   </section>

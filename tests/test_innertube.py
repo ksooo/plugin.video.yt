@@ -33,6 +33,9 @@ BOT_CHECK = {
     'responseContext': {'visitorData': 'visitor-1'},
 }
 
+TRACKING = {'videostatsPlaybackUrl': {'baseUrl': 'https://s.youtube.com/api/stats/playback?a=1'},
+            'videostatsWatchtimeUrl': {'baseUrl': 'https://s.youtube.com/api/stats/watchtime?a=1'}}
+
 
 class PlayerTest(unittest.TestCase):
 
@@ -164,8 +167,24 @@ class PlayerTest(unittest.TestCase):
         player = self.get_player('abc', 'de', 'DE')
         self.assertIs(player.client, innertube.ANDROID_VR)
 
+    def test_the_urls_reporting_playback_come_from_the_signed_in_vr_app(self):
+        self.responses['ANDROID_VR'] = dict(player_response('abc'), playbackTracking=TRACKING)
+        self.assertEqual(innertube.get_playback_tracking('abc', 'de', 'DE', 'access-vr'),
+                         TRACKING)
+        self.assertEqual(self.clients_asked(), ['ANDROID_VR'])
+        self.assertEqual(self.requests[0][1]['Authorization'], 'Bearer access-vr')
 
-class ShelvesTest(unittest.TestCase):
+    def test_a_refused_video_has_no_urls_reporting_playback(self):
+        self.responses['ANDROID_VR'] = dict(BOT_CHECK, playbackTracking=TRACKING)
+        self.assertIsNone(innertube.get_playback_tracking('abc', 'de', 'DE', 'access-vr'))
+
+    def test_every_playback_gets_a_nonce_of_its_own(self):
+        cpn = innertube.new_cpn()
+        self.assertRegex(cpn, '^[A-Za-z0-9_-]{16}$')
+        self.assertNotEqual(cpn, innertube.new_cpn())
+
+
+class BrowseTestCase(unittest.TestCase):
 
     def setUp(self):
         self.requests = []
@@ -177,6 +196,9 @@ class ShelvesTest(unittest.TestCase):
     def _post_json(self, url, payload, headers):
         self.requests.append((url, payload, headers))
         return self.response
+
+
+class ShelvesTest(BrowseTestCase):
 
     def test_the_feed_is_browsed_as_the_signed_in_vr_app(self):
         innertube.get_shelves(innertube.HISTORY, 'de', 'DE', 'access-vr')
@@ -221,3 +243,41 @@ class ShelvesTest(unittest.TestCase):
     def test_an_unexpected_response_has_no_shelves(self):
         self.response = {'responseContext': {}}
         self.assertEqual(innertube.get_shelves(innertube.HISTORY, 'de', 'DE', 't'), [])
+
+
+def watched_video(video_id, percent):
+    video = compact_video(video_id)
+    video['compactVideoRenderer']['thumbnailOverlays'] = [
+        {'thumbnailOverlayTimeStatusRenderer': {'text': {'simpleText': '3:33'}}},
+        {'thumbnailOverlayResumePlaybackRenderer': {'percentDurationWatched': percent}}]
+    return video
+
+
+class WatchProgressTest(BrowseTestCase):
+
+    def test_the_history_is_browsed_as_the_signed_in_vr_app(self):
+        innertube.get_watch_progress('de', 'DE', 'access-vr')
+        url, payload, headers = self.requests[0]
+        self.assertEqual((url, payload['browseId']), (innertube.BROWSE_URL, 'FEhistory'))
+        self.assertEqual(payload['context']['client']['clientName'], 'ANDROID_VR')
+        self.assertEqual(headers['Authorization'], 'Bearer access-vr')
+
+    def test_every_video_comes_with_how_far_it_was_watched(self):
+        self.response = browse_response(
+            {'itemSectionRenderer': {'contents': [watched_video('v1', 47),
+                                                  watched_video('v2', 100)]}},
+            {'itemSectionRenderer': {'contents': [watched_video('v3', 5)]}})
+        self.assertEqual(innertube.get_watch_progress('de', 'DE', 't'),
+                         {'v1': 47, 'v2': 100, 'v3': 5})
+
+    def test_of_a_video_watched_twice_the_latest_viewing_counts(self):
+        self.response = browse_response(
+            {'itemSectionRenderer': {'contents': [watched_video('v1', 30),
+                                                  watched_video('v1', 100)]}})
+        self.assertEqual(innertube.get_watch_progress('de', 'DE', 't'), {'v1': 30})
+
+    def test_a_video_without_progress_is_left_out(self):
+        self.response = browse_response(
+            {'itemSectionRenderer': {'contents': [compact_video('v1'),
+                                                  watched_video('v2', 10)]}})
+        self.assertEqual(innertube.get_watch_progress('de', 'DE', 't'), {'v2': 10})

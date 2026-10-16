@@ -62,13 +62,24 @@ class BrowseTestCase(AddonTestCase):
         self.shelves = {innertube.RECOMMENDATIONS: SHELVES,
                         innertube.HISTORY: [innertube.Shelf('', ['h2', 'h1'])]}
         self.browsed = []
-        patcher = mock.patch.object(innertube, 'get_shelves', self._get_shelves)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        # How far the videos in the account's history were watched, or an
+        # exception asking for it raises.
+        self.progress = {}
+        for patcher in (mock.patch.object(innertube, 'get_shelves', self._get_shelves),
+                        mock.patch.object(innertube, 'get_watch_progress',
+                                          self._get_watch_progress)):
+            patcher.start()
+            self.addCleanup(patcher.stop)
 
     def _get_shelves(self, browse_id, language, region, access_token):
         self.browsed.append((browse_id, access_token))
         return self.shelves[browse_id]
+
+    def _get_watch_progress(self, language, region, access_token):
+        self.browsed.append(('progress', access_token))
+        if isinstance(self.progress, Exception):
+            raise self.progress
+        return self.progress
 
     def _query(self, name):
         def query(*args, auth):
@@ -347,7 +358,7 @@ class HistoryTest(BrowseTestCase):
 
     def test_the_videos_watched_last_are_listed(self):
         items = self.dispatch('history')
-        self.assertEqual(self.browsed, [('FEhistory', 'access-vr')])
+        self.assertEqual(self.browsed[0], ('FEhistory', 'access-vr'))
         self.assertEqual(self.queried('videos'), [(['h2', 'h1'],)])
         self.assertEqual(self.labels(items), ['Never Gonna Give You Up'])
         self.assertEqual(support.PLUGIN_STATE['category'], 'L30401')
@@ -358,6 +369,60 @@ class HistoryTest(BrowseTestCase):
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30105')])
         self.assertFalse(support.PLUGIN_STATE['succeeded'])
         self.assertEqual(self.browsed, [])
+
+
+class SyncTest(BrowseTestCase):
+
+    def found(self):
+        """Search and return the info tag values of the video found."""
+        return self.dispatch('search/results', '?q=rick')[0][1].info_tag.values
+
+    def test_a_video_watched_partly_on_youtube_resumes_where_it_was_left(self):
+        self.progress = {'dQw4w9WgXcQ': 50}
+        values = self.found()
+        self.assertEqual(values['Playcount'], 0)
+        self.assertEqual(values['ResumePoint'], (106.5, 213))
+
+    def test_from_ninety_percent_on_a_video_counts_as_watched(self):
+        self.progress = {'dQw4w9WgXcQ': 90}
+        values = self.found()
+        self.assertEqual(values['Playcount'], 1)
+        self.assertEqual(values['ResumePoint'], (0, 213))
+
+    def test_a_video_not_in_the_history_is_left_to_kodi(self):
+        self.progress = {'other': 50}
+        values = self.found()
+        self.assertNotIn('Playcount', values)
+        self.assertNotIn('ResumePoint', values)
+
+    def test_a_channels_videos_follow_the_history_too(self):
+        self.progress = {'dQw4w9WgXcQ': 50}
+        list_item = self.dispatch('channel', '?id=UC1&title=Alpha')[0][1]
+        self.assertEqual(list_item.info_tag.values['ResumePoint'], (106.5, 213))
+
+    def test_the_history_is_asked_as_the_quest_app_and_kept_for_a_while(self):
+        self.found()
+        self.found()
+        self.assertEqual(self.browsed, [('progress', 'access-vr')])
+
+    def test_without_the_setting_kodi_keeps_its_own(self):
+        support.SETTINGS['sync_account'] = False
+        self.progress = {'dQw4w9WgXcQ': 50}
+        self.assertNotIn('ResumePoint', self.found())
+        self.assertEqual(self.browsed, [])
+
+    def test_without_sign_in_kodi_keeps_its_own(self):
+        self.sign_out(api_key='key-1')
+        self.progress = {'dQw4w9WgXcQ': 50}
+        self.assertNotIn('ResumePoint', self.found())
+        self.assertEqual(self.browsed, [])
+
+    def test_when_the_history_fails_kodi_keeps_its_own(self):
+        self.progress = http.RequestError('timed out from https://www.youtube.com/')
+        self.assertNotIn('ResumePoint', self.found())
+        self.assertTrue(support.PLUGIN_STATE['succeeded'])
+        self.assertEqual(self.errors(),
+                         ['[plugin.video.yt] timed out from https://www.youtube.com/'])
 
 
 class EmojiTest(BrowseTestCase):

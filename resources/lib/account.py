@@ -116,6 +116,13 @@ def access_token(key):
     return all_tokens[key]['access_token']
 
 
+def sync_token():
+    """Return the token to sync the watch history with, None if not to sync."""
+    if not addon.get_bool_setting(addon.SETTING_SYNC_ACCOUNT):
+        return None
+    return access_token(VR)
+
+
 def _authorize(client, heading, purpose):
     """Show the code to enter until the user did so or cancelled."""
     dialog = xbmcgui.DialogProgress()
