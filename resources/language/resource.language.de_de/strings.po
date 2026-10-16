@@ -86,6 +86,21 @@ msgctxt "#30102"
 msgid "This video can only be played when signed in."
 msgstr "Dieses Video lässt sich nur mit Anmeldung wiedergeben."
 
+# notification
+msgctxt "#30103"
+msgid "YouTube refused the request."
+msgstr "YouTube hat die Anfrage abgelehnt."
+
+# notification
+msgctxt "#30104"
+msgid "The daily quota of the YouTube Data API is used up."
+msgstr "Das Tageskontingent der YouTube Data API ist aufgebraucht."
+
+# notification
+msgctxt "#30105"
+msgid "This needs signing in."
+msgstr "Dafür ist eine Anmeldung nötig."
+
 # sign-in dialogue heading, {0} = step, {1} = number of steps
 msgctxt "#30110"
 msgid "Sign in ({0} of {1})"
@@ -130,3 +145,8 @@ msgstr "Anmeldung fehlgeschlagen"
 msgctxt "#30123"
 msgid "The sign-in is no longer valid. Please sign in again."
 msgstr "Die Anmeldung ist nicht mehr gültig. Eine erneute Anmeldung ist nötig."
+
+# main menu
+msgctxt "#30200"
+msgid "Subscriptions"
+msgstr "Abos"

@@ -29,11 +29,20 @@ def post_json(url, payload, headers):
     return _fetch_json(request, url, error_body=False)
 
 
+def get_json(url, headers):
+    """GET url and return the decoded JSON response.
+
+    An error status with a JSON body is returned as well: the YouTube Data API
+    reports its errors that way.
+    """
+    return _fetch_json(Request(url, headers=headers), url, error_body=True)
+
+
 def post_form(url, fields):
     """POST form fields and return the decoded JSON response.
 
-    Unlike post_json(), an error status with a JSON body is returned as well:
-    OAuth reports its errors that way.
+    An error status with a JSON body is returned as well: OAuth reports its
+    errors that way.
     """
     request = Request(url, data=urlencode(fields).encode('utf-8'), method='POST',
                       headers={'Content-Type': 'application/x-www-form-urlencoded'})

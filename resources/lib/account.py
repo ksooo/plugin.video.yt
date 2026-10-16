@@ -81,6 +81,10 @@ def sign_out():
     addon.notify(addon.localize(30121))
 
 
+def is_signed_in():
+    return USER in _load()
+
+
 def access_token(key):
     """Return a valid access token of the account, or None when not signed in.
 

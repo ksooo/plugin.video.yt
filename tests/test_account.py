@@ -10,21 +10,16 @@
 
 import json
 import os
-import time
 from unittest import mock
 
 # Importing support installs the xbmc* stubs, so it has to come first.
 from tests import support
 from tests.support import AddonTestCase
+from tests.support import tokens
 
 from resources.lib import account
 from resources.lib import http
 from resources.lib import oauth
-
-
-def tokens(name, expires_in=3600):
-    return {'access_token': 'access-' + name, 'refresh_token': 'refresh-' + name,
-            'expires_at': time.time() + expires_in}
 
 
 class AccountTestCase(AddonTestCase):
@@ -66,13 +61,6 @@ class AccountTestCase(AddonTestCase):
             return None
         with open(path, encoding='utf-8') as tokens_file:
             return json.load(tokens_file)
-
-    def store_tokens(self, **all_tokens):
-        os.makedirs(support.PROFILE_DIR, exist_ok=True)
-        with open(os.path.join(support.PROFILE_DIR, account.TOKENS_FILE), 'w',
-                  encoding='utf-8') as tokens_file:
-            json.dump(all_tokens, tokens_file)
-        support.SETTINGS['signed_in'] = True
 
 
 class SignInTest(AccountTestCase):
@@ -131,7 +119,7 @@ class SignInTest(AccountTestCase):
 class SignOutTest(AccountTestCase):
 
     def test_all_tokens_are_revoked_and_forgotten(self):
-        self.store_tokens(user=tokens('user'), vr=tokens('vr'))
+        support.store_tokens(user=tokens('user'), vr=tokens('vr'))
         self.dispatch('signout')
         self.assertEqual(sorted(self.revoked), ['refresh-user', 'refresh-vr'])
         self.assertIsNone(self.stored_tokens())
@@ -145,12 +133,12 @@ class AccessTokenTest(AccountTestCase):
         self.assertIsNone(account.access_token(account.VR))
 
     def test_a_valid_token_is_used_as_it_is(self):
-        self.store_tokens(user=tokens('user'), vr=tokens('vr'))
+        support.store_tokens(user=tokens('user'), vr=tokens('vr'))
         self.assertEqual(account.access_token(account.VR), 'access-vr')
         self.assertEqual(self.refreshed, [])
 
     def test_an_expiring_token_is_renewed_with_the_matching_client(self):
-        self.store_tokens(user=tokens('user'), vr=tokens('vr', expires_in=30))
+        support.store_tokens(user=tokens('user'), vr=tokens('vr', expires_in=30))
         self.refresh_result = dict(tokens('vr'), access_token='access-vr-2')
 
         self.assertEqual(account.access_token(account.VR), 'access-vr-2')
@@ -158,14 +146,14 @@ class AccessTokenTest(AccountTestCase):
         self.assertEqual(self.stored_tokens()['vr']['access_token'], 'access-vr-2')
 
     def test_the_users_own_client_renews_the_user_token(self):
-        self.store_tokens(user=tokens('user', expires_in=-1), vr=tokens('vr'))
+        support.store_tokens(user=tokens('user', expires_in=-1), vr=tokens('vr'))
         self.refresh_result = tokens('user')
         account.access_token(account.USER)
         self.assertEqual(self.refreshed[0][0],
                          oauth.Client('own.apps.googleusercontent.com', 'own-secret'))
 
     def test_a_refused_renewal_signs_out(self):
-        self.store_tokens(user=tokens('user'), vr=tokens('vr', expires_in=-1))
+        support.store_tokens(user=tokens('user'), vr=tokens('vr', expires_in=-1))
         self.refresh_result = oauth.OAuthError('invalid_grant')
 
         self.assertIsNone(account.access_token(account.VR))
@@ -174,7 +162,7 @@ class AccessTokenTest(AccountTestCase):
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30123')])
 
     def test_a_network_failure_keeps_the_sign_in(self):
-        self.store_tokens(user=tokens('user'), vr=tokens('vr', expires_in=-1))
+        support.store_tokens(user=tokens('user'), vr=tokens('vr', expires_in=-1))
         self.refresh_result = http.RequestError('timed out')
 
         self.assertIsNone(account.access_token(account.VR))

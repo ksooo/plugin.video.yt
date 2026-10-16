@@ -12,10 +12,12 @@ Importing this module installs the stubs, so it has to come before any import
 of resources.lib.
 """
 
+import json
 import os
 import shutil
 import sys
 import tempfile
+import time
 import types
 import unittest
 
@@ -110,6 +112,21 @@ xbmcvfs.translatePath = lambda path: PROFILE_DIR
 xbmcgui = _make_module('xbmcgui')
 
 
+class InfoTagVideo:
+    """Records every setter call as values[<name without 'set'>]."""
+
+    def __init__(self):
+        self.values = {}
+
+    def __getattr__(self, name):
+        if not name.startswith('set'):
+            raise AttributeError(name)
+
+        def setter(*args):
+            self.values[name[3:]] = args[0] if len(args) == 1 else args
+        return setter
+
+
 class ListItem:
     def __init__(self, label='', label2='', path='', offscreen=False):
         self.label = label
@@ -117,6 +134,22 @@ class ListItem:
         self.mime_type = None
         self.content_lookup = True
         self.properties = {}
+        self.is_folder = None
+        self.art = {}
+        self.date_time = None
+        self.info_tag = InfoTagVideo()
+
+    def setIsFolder(self, is_folder):
+        self.is_folder = is_folder
+
+    def setArt(self, art):
+        self.art.update(art)
+
+    def setDateTime(self, date_time):
+        self.date_time = date_time
+
+    def getVideoInfoTag(self):
+        return self.info_tag
 
     def setMimeType(self, mime_type):
         self.mime_type = mime_type
@@ -171,9 +204,19 @@ def _set_resolved_url(handle, succeeded, listitem):
     PLUGIN_STATE['resolved_item'] = listitem
 
 
+xbmcplugin.SORT_METHOD_UNSORTED = 'unsorted'
+xbmcplugin.SORT_METHOD_LABEL = 'label'
+xbmcplugin.SORT_METHOD_DATE = 'date'
+xbmcplugin.SORT_METHOD_TITLE = 'title'
+xbmcplugin.SORT_METHOD_DURATION = 'duration'
 xbmcplugin.addDirectoryItems = _add_directory_items
 xbmcplugin.endOfDirectory = _end_of_directory
 xbmcplugin.setResolvedUrl = _set_resolved_url
+xbmcplugin.setPluginCategory = lambda handle, category: PLUGIN_STATE.__setitem__('category',
+                                                                                category)
+xbmcplugin.setContent = lambda handle, content: PLUGIN_STATE.__setitem__('content', content)
+xbmcplugin.addSortMethod = (
+    lambda handle, method, *args: PLUGIN_STATE.setdefault('sort_methods', []).append(method))
 
 
 def reset_output():
@@ -191,6 +234,20 @@ def reset():
     del PROGRESS[:]
     PROGRESS_CANCELED[0] = False
     shutil.rmtree(PROFILE_DIR, ignore_errors=True)
+
+
+def tokens(name, expires_in=3600):
+    """Tokens as account.py keeps them for one account."""
+    return {'access_token': 'access-' + name, 'refresh_token': 'refresh-' + name,
+            'expires_at': time.time() + expires_in}
+
+
+def store_tokens(**all_tokens):
+    """Sign in by putting the tokens file in place."""
+    os.makedirs(PROFILE_DIR, exist_ok=True)
+    with open(os.path.join(PROFILE_DIR, 'tokens.json'), 'w', encoding='utf-8') as tokens_file:
+        json.dump(all_tokens, tokens_file)
+    SETTINGS['signed_in'] = True
 
 
 # -- YouTube data -------------------------------------------------------------

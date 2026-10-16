@@ -86,6 +86,21 @@ msgctxt "#30102"
 msgid "This video can only be played when signed in."
 msgstr ""
 
+# notification
+msgctxt "#30103"
+msgid "YouTube refused the request."
+msgstr ""
+
+# notification
+msgctxt "#30104"
+msgid "The daily quota of the YouTube Data API is used up."
+msgstr ""
+
+# notification
+msgctxt "#30105"
+msgid "This needs signing in."
+msgstr ""
+
 # sign-in dialogue heading, {0} = step, {1} = number of steps
 msgctxt "#30110"
 msgid "Sign in ({0} of {1})"
@@ -129,4 +144,9 @@ msgstr ""
 # notification
 msgctxt "#30123"
 msgid "The sign-in is no longer valid. Please sign in again."
+msgstr ""
+
+# main menu
+msgctxt "#30200"
+msgid "Subscriptions"
 msgstr ""

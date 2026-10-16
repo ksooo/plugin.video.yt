@@ -7,8 +7,10 @@ as folders in Kodi's video window.
 
 ## Status
 
-Under construction. The add-on has no listings yet, but signs in and plays a video given by its
-id: `plugin://plugin.video.yt/play?v=<video id>`.
+Under construction. Signed in, the add-on lists your subscriptions: below **Subscriptions** the
+channels, below each channel its 100 newest videos - those of the channel's **Videos** tab on
+YouTube, so neither shorts nor live recordings. Any video plays from
+`plugin://plugin.video.yt/play/?v=<video id>`.
 
 ## Requirements
 

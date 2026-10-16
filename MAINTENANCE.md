@@ -7,6 +7,36 @@ dispatched by `router.py`. Kodi stores resume points and play counts under the
 plugin URL of a video, so these URLs are part of the user's data: changing the
 URL of a video loses its resume point and play count.
 
+## Listings
+
+Kodi itself keeps resume points and play counts of plugin items, under their
+plugin URL, and fills them into later listings (`CVideoDatabase::GetPlayCounts`).
+Two things make that work:
+
+* `listing.url()` sorts the parameters, so a video always gets the very same
+  URL, the one `.strm` files and favourites use too.
+* Every route ends with a slash, as in `play/?v=<id>`. Kodi stores the path
+  part of a plugin URL with a trailing slash (`AddPath`), but
+  `GetPlayCounts` looks it up as it comes. Without the slash, resuming works
+  but listings never show a resume point or play count.
+* `listing.video_item()` never sets a play count or resume point. Kodi only
+  fills in what the item leaves unset.
+
+Channels list the videos of their **Videos** tab on YouTube. YouTube keeps
+those in a playlist of its own: `UULF` followed by the channel id without its
+`UC`. It holds neither shorts (`UUSH`) nor live recordings (`UULV`), and
+does not exist for a channel without a single such video.
+
+There is no "next page" entry: a channel shows its newest 100 videos and
+that's it.
+
+## YouTube Data API
+
+`dataapi.py` wraps the calls; each notes its quota cost. A project gets
+10,000 units a day. Opening the subscriptions costs 1 unit per 50 channels,
+opening a channel 4 units. The API reports errors as JSON with a `reason`
+such as `quotaExceeded`, which the add-on turns into a notification.
+
 ## Signing in
 
 `oauth.py` implements Google's OAuth flow for limited-input devices; signing
