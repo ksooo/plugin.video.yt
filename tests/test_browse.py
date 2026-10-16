@@ -50,6 +50,8 @@ class BrowseTestCase(AddonTestCase):
         # raise instead.
         self.results = {'subscriptions': CHANNELS, 'channel_videos': [VIDEO],
                         'most_popular': [VIDEO], 'search': [VIDEO], 'videos': [VIDEO],
+                        'video_categories': [dataapi.Category('10', 'Musik'),
+                                             dataapi.Category('20', 'Gaming')],
                         'subscribe': 'sub-new', 'unsubscribe': None}
         self.failure = None
         for name in self.results:
@@ -253,30 +255,47 @@ GO_TO_CHANNEL = (
 
 class TrendingTest(BrowseTestCase):
 
-    def test_the_most_popular_videos_of_kodis_region_are_listed(self):
-        support.INFO_LABELS['System.Locale(iso)'] = 'AT'
+    def category(self):
+        return self.dispatch('trending/category', '?id=10&title=Musik')
+
+    def test_all_trends_then_the_categories_are_folders_pictured_by_their_top_video(self):
         items = self.dispatch('trending')
-        self.assertEqual(self.queried('most_popular'), [('AT', 100)])
-        self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/play/?v=dQw4w9WgXcQ'])
+        self.assertEqual(self.labels(items), ['L30310', 'Musik', 'Gaming'])
+        self.assertEqual(self.urls(items)[:2],
+                         ['plugin://plugin.video.yt/trending/category/?id=&title=L30310',
+                          'plugin://plugin.video.yt/trending/category/?id=10&title=Musik'])
+        self.assertEqual(items[0][1].art['thumb'], VIDEO.thumbnail)
         self.assertEqual(support.PLUGIN_STATE['category'], 'L30300')
+
+    def test_all_trends_lists_the_most_popular_videos_of_all_categories(self):
+        self.dispatch('trending/category', '?id=&title=Alle+Trends')
+        self.assertEqual(self.queried('most_popular'), [('US', None, 100)])
+        self.assertEqual(support.PLUGIN_STATE['category'], 'L30300 / Alle Trends')
+
+    def test_a_category_lists_its_most_popular_videos_in_kodis_region(self):
+        support.INFO_LABELS['System.Locale(iso)'] = 'AT'
+        items = self.category()
+        self.assertEqual(self.queried('most_popular'), [('AT', '10', 100)])
+        self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/play/?v=dQw4w9WgXcQ'])
+        self.assertEqual(support.PLUGIN_STATE['category'], 'L30300 / Musik')
 
     def test_videos_lead_to_their_channel_and_know_the_subscription(self):
         self.cache_channels({'UC1': 'sub-UC1'})
-        list_item = self.dispatch('trending')[0][1]
+        list_item = self.category()[0][1]
         self.assertEqual([entry[0] for entry in list_item.context_menu], ['L30204', 'L30202'])
         self.assertEqual(list_item.context_menu[0], GO_TO_CHANNEL)
 
     def test_the_entries_name_the_channel(self):
         self.cache_channels({})
         with mock.patch.object(addon, 'localize', lambda string_id: 'L{} {{0}}'.format(string_id)):
-            list_item = self.dispatch('trending')[0][1]
+            list_item = self.category()[0][1]
         self.assertEqual([entry[0] for entry in list_item.context_menu],
                          ['L30204 Alpha & Omega', 'L30201 Alpha & Omega'])
 
     def test_without_sign_in_the_api_key_is_used_and_nobody_subscribes(self):
         self.sign_out(api_key='key-1')
-        list_item = self.dispatch('trending')[0][1]
-        self.assertEqual(self.queries, [('most_popular', ('', 100), 'key:key-1')])
+        list_item = self.category()[0][1]
+        self.assertEqual(self.queries, [('most_popular', ('US', '10', 100), 'key:key-1')])
         self.assertEqual(list_item.context_menu, [GO_TO_CHANNEL])
 
 
@@ -343,7 +362,7 @@ class EmojiTest(BrowseTestCase):
 
     def listed(self, title):
         self.results['most_popular'] = [VIDEO._replace(title=title)]
-        list_item = self.dispatch('trending')[0][1]
+        list_item = self.dispatch('trending/category', '?id=10&title=Musik')[0][1]
         return list_item.label, list_item.info_tag.values['Title']
 
     def test_only_emojis_starting_a_title_are_removed(self):

@@ -107,7 +107,7 @@ class SubscriptionsTest(DataApiTestCase):
 
     def test_without_an_account_the_api_key_is_used(self):
         self.responses['videos'] = [{'items': []}]
-        dataapi.most_popular('', 50, auth=KEY_ONLY)
+        dataapi.most_popular('DE', '10', 50, auth=KEY_ONLY)
         self.assertEqual(self.requests[0][2], {})
         self.assertEqual(self.requests[0][1]['key'], 'key-1')
 
@@ -189,17 +189,34 @@ class ChannelVideosTest(DataApiTestCase):
 
 class MostPopularTest(DataApiTestCase):
 
-    def test_the_chart_of_the_region_is_asked_for(self):
+    def test_the_chart_of_the_regions_category_is_asked_for(self):
         self.responses['videos'] = [{'items': [video('v1'), video('v2')]}]
-        videos = dataapi.most_popular('DE', 100, auth=USER)
+        videos = dataapi.most_popular('DE', '10', 100, auth=USER)
         self.assertEqual([video.video_id for video in videos], ['v1', 'v2'])
         params = self.requested('videos')[0]
-        self.assertEqual((params['chart'], params['regionCode']), ('mostPopular', 'DE'))
+        self.assertEqual((params['chart'], params['regionCode'], params['videoCategoryId']),
+                         ('mostPopular', 'DE', '10'))
 
-    def test_an_unknown_region_is_left_to_youtube(self):
-        self.responses['videos'] = [{'items': []}]
-        dataapi.most_popular('', 100, auth=USER)
-        self.assertNotIn('regionCode', self.requested('videos')[0])
+    def test_a_category_without_chart_is_refused(self):
+        self.responses['videos'] = [error('videoChartNotFound', code=404)]
+        with self.assertRaises(dataapi.DataApiError) as context:
+            dataapi.most_popular('DE', '18', 1, auth=USER)
+        self.assertEqual(str(context.exception), 'videoChartNotFound')
+
+
+class VideoCategoriesTest(DataApiTestCase):
+
+    def test_the_assignable_categories_of_the_region_are_named_in_its_language(self):
+        self.responses['videoCategories'] = [{'items': [
+            {'id': '1', 'snippet': {'title': 'Film & Animation', 'assignable': True}},
+            {'id': '18', 'snippet': {'title': 'Kurzfilme', 'assignable': False}},
+            {'id': '10', 'snippet': {'title': 'Musik', 'assignable': True}},
+        ]}]
+        self.assertEqual(dataapi.video_categories('DE', 'de', auth=USER),
+                         [dataapi.Category('1', 'Film & Animation'),
+                          dataapi.Category('10', 'Musik')])
+        params = self.requested('videoCategories')[0]
+        self.assertEqual((params['regionCode'], params['hl']), ('DE', 'de'))
 
 
 class SearchTest(DataApiTestCase):

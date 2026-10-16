@@ -10,6 +10,7 @@
 
 import json
 import os
+import time
 
 import xbmc
 import xbmcaddon
@@ -86,6 +87,22 @@ def load_json(path, default):
 def save_json(path, data):
     with open(path, 'w', encoding='utf-8') as json_file:
         json.dump(data, json_file)
+
+
+def cached(file_name, key, max_age_seconds, fetch):
+    """Return what fetch() returned for the key, kept in a file of Kodi's temp directory.
+
+    Entries older than max_age_seconds are fetched anew. Kept as JSON, tuples
+    come back as lists.
+    """
+    path = temp_path(file_name)
+    now = time.time()
+    cache = {cached_key: entry for cached_key, entry in load_json(path, {}).items()
+             if now - entry['saved_at'] < max_age_seconds}
+    if key not in cache:
+        cache[key] = {'saved_at': now, 'data': fetch()}
+        save_json(path, cache)
+    return cache[key]['data']
 
 
 def log(message, level=xbmc.LOGDEBUG):

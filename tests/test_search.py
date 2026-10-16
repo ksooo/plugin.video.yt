@@ -13,6 +13,7 @@ from unittest import mock
 # Importing support installs the xbmc* stubs, so it has to come first.
 from tests.support import AddonTestCase
 
+from resources.lib import addon
 from resources.lib import dataapi
 from resources.lib import search
 
@@ -83,8 +84,8 @@ class ResultsTest(AddonTestCase):
         self.assertEqual(len(self.searches), 3)
 
     def test_results_older_than_fifteen_minutes_are_searched_anew(self):
-        with mock.patch.object(search.time, 'time', return_value=1000000):
+        with mock.patch.object(addon.time, 'time', return_value=1000000):
             self.results()
-        with mock.patch.object(search.time, 'time', return_value=1000000 + 15 * 60):
+        with mock.patch.object(addon.time, 'time', return_value=1000000 + 15 * 60):
             self.results()
         self.assertEqual(len(self.searches), 2)

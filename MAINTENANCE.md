@@ -27,7 +27,7 @@ those in a playlist of its own: `UULF` followed by the channel id without its
 `UC`. It holds neither shorts (`UUSH`) nor live recordings (`UULV`), and
 does not exist for a channel without a single such video.
 
-There is no "next page" entry: a channel and the trending videos show 100
+There is no "next page" entry: a channel and a trending category show 100
 videos, a search 50, and that's it.
 
 Video titles lose the emojis they start with: Kodi renders a label starting
@@ -35,6 +35,18 @@ with one blank. Emojis further on stay, as boxes - skin fonts have no glyphs
 for them. `listing._LEADING_EMOJIS` covers the emoji blocks, the symbols and
 dingbats used as emojis, and the invisible characters emojis are composed
 with; dashes, quotes or the euro sign are not affected.
+
+### Trending
+
+YouTube retired its trending page in 2025; the Data API's `mostPopular`
+chart lives on, per video category. `trends.py` lists the region's
+assignable categories and asks each for its single most popular video:
+YouTube keeps no chart for some of them (`notFound`, `videoChartNotFound`;
+in Germany "Education" and "Travel & Events"), and those are left out. That
+costs a unit per category, so the outcome is kept for a day in Kodi's temp
+directory, per region and language - with the top video's thumbnail, which
+pictures the category's folder. "All trends" is the chart without category,
+asked for and kept the same way.
 
 A channel's breadcrumb only names the subscriptions when the channel was
 opened from there - the `parent` parameter of its URL says so. Gone to from
@@ -74,8 +86,9 @@ is gone there.
 
 `dataapi.py` wraps the calls; each notes its quota cost. A project gets
 10,000 units a day. Opening the subscriptions costs 1 unit per 50 channels,
-opening a channel 4 units, the trending videos 2, a search 101, subscribing
-or unsubscribing 50.
+opening a channel 4 units, a category of trending videos 2, a search 101,
+subscribing or unsubscribing 50. Finding the trending categories costs one
+unit per category once a day.
 
 A signed-in account's token authorizes every request, for its own data as
 for public data. Without a sign-in, the API key does for the public data -

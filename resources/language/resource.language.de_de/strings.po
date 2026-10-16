@@ -226,6 +226,11 @@ msgctxt "#30305"
 msgid "Delete this search?"
 msgstr "Diese Suche löschen?"
 
+# first folder below trending, before the categories
+msgctxt "#30310"
+msgid "All trends"
+msgstr "Alle Trends"
+
 # main menu
 msgctxt "#30400"
 msgid "Recommendations"

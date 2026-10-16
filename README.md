@@ -13,7 +13,9 @@ Under construction. The top level offers:
   those of the channel's **Videos** tab on YouTube, so neither shorts nor live recordings.
 * **Recommendations**, when signed in: YouTube's recommendations for you, in the shelves of the
   YouTube app's home - "Recommended", "Recently uploaded", topics and so on.
-* **Trending**: YouTube's 100 most popular videos in the region set in Kodi.
+* **Trending**: **All trends**, then YouTube's categories such as music, gaming or sports, each
+  with its 100 most popular videos in the region set in Kodi. Categories YouTube keeps no chart
+  for in the region are left out.
 * **Search**: a new search, and the 20 recent searches to run again or delete. YouTube searches
   by relevance, in the region and language set in Kodi.
 * **History**, when signed in: the videos watched last on YouTube, the latest first. Videos

@@ -28,8 +28,9 @@ from . import listing
 from . import playback
 from . import search
 from . import subscriptions
+from . import trends
 
-#: The most videos listed for a channel or as trending.
+#: The most videos listed for a channel or a category of trending videos.
 VIDEO_COUNT = 100
 
 #: The most videos listed for a search; a page of 50 costs 101 quota units.
@@ -155,10 +156,25 @@ class Router:
         return access_token
 
     def _list_trending(self):
-        """Show the most popular videos in Kodi's region."""
-        self._list_videos(lambda auth: dataapi.most_popular(addon.region(), VIDEO_COUNT,
-                                                            auth=auth),
-                          addon.localize(30300))
+        """Show the categories of Kodi's region YouTube has trending videos for."""
+        categories = self._query_data_api(trends.categories)
+        if categories is None:
+            return
+
+        items = []
+        for category in categories:
+            title = category.title or addon.localize(30310)
+            items.append(listing.folder_item(title, 'trending/category', category.thumbnail,
+                                             id=category.category_id, title=title))
+        listing.finish_folders(self._handle, items, addon.localize(30300))
+
+    def _list_trending_category(self):
+        """Show the most popular videos of a category. Parameters: id (empty for all), title."""
+        category_id = self._params.get('id') or None
+        self._list_videos(lambda auth: dataapi.most_popular(trends.region(), category_id,
+                                                            VIDEO_COUNT, auth=auth),
+                          listing.breadcrumb(addon.localize(30300),
+                                             self._params.get('title', '')))
 
     def _list_search(self):
         """Show the entries to search anew and to search again."""
@@ -314,6 +330,7 @@ _ROUTES = {
     'recommended/shelf': Router._list_recommendation_shelf,
     'history': Router._list_history,
     'trending': Router._list_trending,
+    'trending/category': Router._list_trending_category,
     'search': Router._list_search,
     'search/new': Router._new_search,
     'search/recent': Router._list_recent_searches,

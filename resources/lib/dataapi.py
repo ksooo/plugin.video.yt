@@ -30,6 +30,8 @@ Auth = collections.namedtuple('Auth', 'token api_key')
 #: A subscribed channel. Unsubscribing takes the subscription's id, not the channel's.
 Channel = collections.namedtuple('Channel', 'channel_id title thumbnail subscription_id')
 
+Category = collections.namedtuple('Category', 'category_id title')
+
 Video = collections.namedtuple(
     'Video',
     'video_id title description channel_id channel_title published duration thumbnail tags')
@@ -93,14 +95,29 @@ def channel_videos(channel_id, count, auth):
     return videos(video_ids, auth)
 
 
-def most_popular(region, count, auth):
-    """Return the most popular videos in the region, most popular first. 1 unit per 50.
+def video_categories(region, language, auth):
+    """Return the categories videos of the region can be put into. 1 unit.
 
-    region is an ISO 3166 code such as 'DE', or empty for YouTube's default.
+    region and language are ISO codes such as 'DE' and 'de'; language names
+    the categories.
     """
-    params = {'part': 'snippet,contentDetails', 'chart': 'mostPopular'}
-    if region:
-        params['regionCode'] = region
+    response = _request('GET', 'videoCategories',
+                        {'part': 'snippet', 'regionCode': region, 'hl': language}, auth)
+    return [Category(item['id'], item['snippet']['title'])
+            for item in response.get('items', []) if item['snippet'].get('assignable')]
+
+
+def most_popular(region, category_id, count, auth):
+    """Return the most popular videos, most popular first. 1 unit per 50.
+
+    region is an ISO 3166 code such as 'DE'. category_id narrows them to a
+    category, None means all. YouTube has no chart for every category of a
+    region; asking for one anyway is refused with 'notFound' or
+    'videoChartNotFound'.
+    """
+    params = {'part': 'snippet,contentDetails', 'chart': 'mostPopular', 'regionCode': region}
+    if category_id:
+        params['videoCategoryId'] = category_id
     return [_video(item) for item in _all_items('videos', params, auth, limit=count)]
 
 

@@ -14,8 +14,6 @@ a search costs 101 quota units and going back to the results would otherwise
 search anew.
 """
 
-import time
-
 from . import addon
 from . import dataapi
 
@@ -45,16 +43,7 @@ def forget(query):
 
 def results(query, region, language, count, auth):
     """Return the videos found for the query, from the cache if searched for lately."""
-    key = '\n'.join((query, region, language, str(count)))
-    now = time.time()
-    cache = {cached_key: entry
-             for cached_key, entry in addon.load_json(addon.temp_path(RESULTS_FILE), {}).items()
-             if now - entry['saved_at'] < RESULTS_MAX_AGE_SECONDS}
-
-    if key in cache:
-        return [dataapi.Video(*video) for video in cache[key]['videos']]
-
-    videos = dataapi.search(query, region, language, count, auth=auth)
-    cache[key] = {'saved_at': now, 'videos': videos}
-    addon.save_json(addon.temp_path(RESULTS_FILE), cache)
-    return videos
+    videos = addon.cached(RESULTS_FILE, '\n'.join((query, region, language, str(count))),
+                          RESULTS_MAX_AGE_SECONDS,
+                          lambda: dataapi.search(query, region, language, count, auth=auth))
+    return [dataapi.Video(*video) for video in videos]
