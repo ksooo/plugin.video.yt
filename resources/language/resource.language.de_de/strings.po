@@ -128,8 +128,8 @@ msgstr "Damit erhält das Addon Zugriff auf die Abos."
 
 # sign-in dialogue, purpose of step 2
 msgctxt "#30113"
-msgid "This grants YouTube's app for Meta Quest access, which plays age-restricted videos."
-msgstr "Damit erhält die YouTube-App für Meta Quest Zugriff, über die altersbeschränkte Videos wiedergegeben werden."
+msgid "This grants YouTube's app for Meta Quest access, which fetches recommendations and history and plays age-restricted videos."
+msgstr "Damit erhält die YouTube-App für Meta Quest Zugriff, über die Empfehlungen und Verlauf abgerufen und altersbeschränkte Videos wiedergegeben werden."
 
 # sign-in dialogue, while the code is requested
 msgctxt "#30114"
@@ -225,3 +225,13 @@ msgstr "Löschen"
 msgctxt "#30305"
 msgid "Delete this search?"
 msgstr "Diese Suche löschen?"
+
+# main menu
+msgctxt "#30400"
+msgid "Recommendations"
+msgstr "Empfehlungen"
+
+# main menu
+msgctxt "#30401"
+msgid "History"
+msgstr "Verlauf"

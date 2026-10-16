@@ -21,6 +21,11 @@ import string
 from . import http
 
 PLAYER_URL = 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false'
+BROWSE_URL = 'https://www.youtube.com/youtubei/v1/browse?prettyPrint=false'
+
+#: Browse ids of the account's feeds.
+RECOMMENDATIONS = 'FEwhat_to_watch'
+HISTORY = 'FEhistory'
 
 
 class Client:
@@ -86,6 +91,9 @@ PLAYER_CLIENTS = (ANDROID, ANDROID_VR)
 #: A player response and the client it was given to.
 Player = collections.namedtuple('Player', 'response client')
 
+#: A row of videos of a feed, such as "Recently uploaded" in the recommendations.
+Shelf = collections.namedtuple('Shelf', 'title video_ids')
+
 _CPN_ALPHABET = string.ascii_letters + string.digits + '-_'
 
 
@@ -139,15 +147,73 @@ def get_player(video_id, language, region, access_token):
                            asked_for_sign_in and signed_out_client)
 
 
-def _request_player(client, video_id, language, region, token, visitor_data=None):
+def get_shelves(browse_id, language, region, access_token):
+    """Return the shelves of one of the signed-in account's feeds, as on the app's home.
+
+    Only the first page is fetched. access_token is the token of the account
+    ANDROID_VR accepts.
+    """
+    client = ANDROID_VR
+    headers = dict(client.api_headers, Authorization='Bearer ' + access_token)
+    response = http.post_json(BROWSE_URL, {
+        'context': {'client': _context(client, language, region)},
+        'browseId': browse_id,
+    }, headers)
+
+    shelves = []
+    for tab in response.get('contents', {}).get('singleColumnBrowseResultsRenderer', {}).get(
+            'tabs', []):
+        sections = tab.get('tabRenderer', {}).get('content', {}).get('sectionListRenderer', {})
+        for section in sections.get('contents', []):
+            shelf = _shelf(section)
+            if shelf is not None:
+                shelves.append(shelf)
+    return shelves
+
+
+def _shelf(section):
+    """Return the shelf of a section of a browse response, None if it holds no video."""
+    if 'shelfRenderer' in section:
+        renderer = section['shelfRenderer']
+        content = renderer.get('content', {})
+        items = (content.get('verticalListRenderer') or content.get('horizontalListRenderer')
+                 or {}).get('items', [])
+    elif 'itemSectionRenderer' in section:
+        renderer = section['itemSectionRenderer']
+        items = renderer.get('contents', [])
+    else:
+        return None
+
+    video_ids = [item['compactVideoRenderer']['videoId'] for item in items
+                 if 'videoId' in item.get('compactVideoRenderer', {})]
+    if not video_ids:
+        return None
+    return Shelf(_text(renderer.get('title')), video_ids)
+
+
+def _text(node):
+    """Return the text of a text node, which InnerTube gives as simpleText or as runs."""
+    if not node:
+        return ''
+    if 'simpleText' in node:
+        return node['simpleText']
+    return ''.join(run.get('text', '') for run in node.get('runs', []))
+
+
+def _context(client, language, region):
     context = dict(client.context)
-    headers = client.api_headers
-    if token:
-        headers['Authorization'] = 'Bearer ' + token
     if language:
         context['hl'] = language
     if region:
         context['gl'] = region
+    return context
+
+
+def _request_player(client, video_id, language, region, token, visitor_data=None):
+    context = _context(client, language, region)
+    headers = client.api_headers
+    if token:
+        headers['Authorization'] = 'Bearer ' + token
     if visitor_data:
         context['visitorData'] = visitor_data
         headers['X-Goog-Visitor-Id'] = visitor_data

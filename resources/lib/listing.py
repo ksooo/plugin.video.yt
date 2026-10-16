@@ -52,6 +52,11 @@ def breadcrumb(*parts):
     return BREADCRUMB_SEPARATOR.join(parts)
 
 
+def video_thumbnail(video_id):
+    """Return the URL of the video's thumbnail; YouTube keeps it under a fixed one."""
+    return 'https://i.ytimg.com/vi/{}/hqdefault.jpg'.format(video_id)
+
+
 def folder_item(label, route, thumbnail='', context_menu=(), **params):
     """Build the listing tuple of a folder."""
     list_item = xbmcgui.ListItem(label=label, offscreen=True)

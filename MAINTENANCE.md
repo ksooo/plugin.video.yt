@@ -135,6 +135,21 @@ None of this is documented or promised. Signs of trouble and what to do:
 * Segments fail with HTTP 403 in the ISA log - YouTube started checking more
   of the client identity on stream requests than `stream_headers` sends.
 
+### Recommendations and history
+
+The Data API has neither, so `innertube.get_shelves()` browses the
+account's feeds `FEwhat_to_watch` and `FEhistory`, as the Quest app with its
+token - the TV app's sign-in that other clients use is not needed. Only the
+video ids and the shelf titles are taken from the response, the
+`compactVideoRenderer` items of the shelves; the videos' details come from
+the Data API like everywhere else. If YouTube changes the layout of these
+responses, the folders turn up empty.
+
+The recommendations change with every request and their shelves have no id.
+`feeds.py` keeps the shelves last listed for 15 minutes in Kodi's temp
+directory and opens a shelf by its title from there, so it shows what the
+list promised.
+
 ### The manifest
 
 `manifest.py` builds a DASH manifest from the adaptive formats: YouTube serves

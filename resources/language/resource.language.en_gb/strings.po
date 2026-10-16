@@ -128,7 +128,7 @@ msgstr ""
 
 # sign-in dialogue, purpose of step 2
 msgctxt "#30113"
-msgid "This grants YouTube's app for Meta Quest access, which plays age-restricted videos."
+msgid "This grants YouTube's app for Meta Quest access, which fetches recommendations and history and plays age-restricted videos."
 msgstr ""
 
 # sign-in dialogue, while the code is requested
@@ -224,4 +224,14 @@ msgstr ""
 # confirmation
 msgctxt "#30305"
 msgid "Delete this search?"
+msgstr ""
+
+# main menu
+msgctxt "#30400"
+msgid "Recommendations"
+msgstr ""
+
+# main menu
+msgctxt "#30401"
+msgid "History"
 msgstr ""

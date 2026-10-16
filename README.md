@@ -11,9 +11,13 @@ Under construction. The top level offers:
 
 * **Subscriptions**, when signed in: the channels, below each channel its 100 newest videos -
   those of the channel's **Videos** tab on YouTube, so neither shorts nor live recordings.
+* **Recommendations**, when signed in: YouTube's recommendations for you, in the shelves of the
+  YouTube app's home - "Recommended", "Recently uploaded", topics and so on.
 * **Trending**: YouTube's 100 most popular videos in the region set in Kodi.
-* **Search**: a new search, and the 20 recent searches to run again. YouTube searches by
-  relevance, in the region and language set in Kodi.
+* **Search**: a new search, and the 20 recent searches to run again or delete. YouTube searches
+  by relevance, in the region and language set in Kodi.
+* **History**, when signed in: the videos watched last on YouTube, the latest first. Videos
+  watched in Kodi do not show up there; the add-on does not report to YouTube what it plays.
 
 Trending and search work with just the API key, without signing in.
 
@@ -44,7 +48,8 @@ Google Cloud project, which is free:
 
 Signing in takes two codes, entered one after the other on a phone or computer. The first grants
 your own OAuth client access to the account. The second grants it to YouTube's app for Meta Quest,
-whose identity the add-on uses to play age-restricted videos. **Sign out** revokes both.
+whose identity the add-on uses for your recommendations and history and to play age-restricted
+videos. **Sign out** revokes both.
 
 ## Trademark
 

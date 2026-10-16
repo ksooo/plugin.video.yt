@@ -16,6 +16,17 @@ from tests.support import player_response
 
 from resources.lib import innertube
 
+def compact_video(video_id):
+    return {'compactVideoRenderer': {'videoId': video_id,
+                                     'title': {'runs': [{'text': 'Title ' + video_id}]}}}
+
+
+def browse_response(*sections):
+    return {'contents': {'singleColumnBrowseResultsRenderer': {'tabs': [
+        {'tabRenderer': {'content': {'sectionListRenderer': {'contents': list(sections)}}}},
+    ]}}}
+
+
 BOT_CHECK = {
     'playabilityStatus': {'status': 'LOGIN_REQUIRED',
                           'reason': 'Sign in to confirm you are not a bot'},
@@ -152,3 +163,61 @@ class PlayerTest(unittest.TestCase):
         self.responses['ANDROID'] = player_response('other')
         player = self.get_player('abc', 'de', 'DE')
         self.assertIs(player.client, innertube.ANDROID_VR)
+
+
+class ShelvesTest(unittest.TestCase):
+
+    def setUp(self):
+        self.requests = []
+        self.response = browse_response()
+        patcher = mock.patch.object(innertube.http, 'post_json', self._post_json)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _post_json(self, url, payload, headers):
+        self.requests.append((url, payload, headers))
+        return self.response
+
+    def test_the_feed_is_browsed_as_the_signed_in_vr_app(self):
+        innertube.get_shelves(innertube.HISTORY, 'de', 'DE', 'access-vr')
+        url, payload, headers = self.requests[0]
+        self.assertEqual((url, payload['browseId']), (innertube.BROWSE_URL, 'FEhistory'))
+        self.assertEqual(payload['context']['client']['clientName'], 'ANDROID_VR')
+        self.assertEqual((payload['context']['client']['hl'],
+                          payload['context']['client']['gl']), ('de', 'DE'))
+        self.assertEqual(headers['Authorization'], 'Bearer access-vr')
+
+    def test_shelves_come_with_title_and_videos_in_order(self):
+        self.response = browse_response(
+            {'shelfRenderer': {'title': {'runs': [{'text': 'Empfohlen'}]},
+                               'content': {'verticalListRenderer': {'items': [
+                                   compact_video('v2'), compact_video('v1')]}}}},
+            {'shelfRenderer': {'title': {'simpleText': 'Kürzlich hochgeladen'},
+                               'content': {'horizontalListRenderer': {'items': [
+                                   compact_video('v3')]}}}})
+        self.assertEqual(innertube.get_shelves(innertube.RECOMMENDATIONS, 'de', 'DE', 't'),
+                         [innertube.Shelf('Empfohlen', ['v2', 'v1']),
+                          innertube.Shelf('Kürzlich hochgeladen', ['v3'])])
+
+    def test_a_section_of_items_is_a_shelf_without_title(self):
+        self.response = browse_response(
+            {'itemSectionRenderer': {'contents': [compact_video('v1'), compact_video('v2')]}})
+        self.assertEqual(innertube.get_shelves(innertube.HISTORY, 'de', 'DE', 't'),
+                         [innertube.Shelf('', ['v1', 'v2'])])
+
+    def test_whatever_is_no_video_is_left_out(self):
+        self.response = browse_response(
+            {'shelfRenderer': {'title': {'simpleText': 'Mixed'},
+                               'content': {'verticalListRenderer': {'items': [
+                                   {'compactChannelRenderer': {'channelId': 'UC1'}},
+                                   compact_video('v1')]}}}},
+            {'shelfRenderer': {'title': {'simpleText': 'Channels only'},
+                               'content': {'verticalListRenderer': {'items': [
+                                   {'compactChannelRenderer': {'channelId': 'UC2'}}]}}}},
+            {'continuationItemRenderer': {}})
+        self.assertEqual(innertube.get_shelves(innertube.RECOMMENDATIONS, 'de', 'DE', 't'),
+                         [innertube.Shelf('Mixed', ['v1'])])
+
+    def test_an_unexpected_response_has_no_shelves(self):
+        self.response = {'responseContext': {}}
+        self.assertEqual(innertube.get_shelves(innertube.HISTORY, 'de', 'DE', 't'), [])

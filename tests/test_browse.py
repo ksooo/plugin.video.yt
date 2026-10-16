@@ -21,6 +21,7 @@ from tests.support import tokens
 from resources.lib import addon
 from resources.lib import dataapi
 from resources.lib import http
+from resources.lib import innertube
 from resources.lib.router import Router
 
 CHANNELS = [dataapi.Channel('UC1', 'Alpha & Omega', 'https://yt3/UC1', 'sub-UC1'),
@@ -32,6 +33,9 @@ VIDEO = dataapi.Video(video_id='dQw4w9WgXcQ', title='Never Gonna Give You Up',
                       duration=213,
                       thumbnail='https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
                       tags=['rick', 'astley'])
+
+SHELVES = [innertube.Shelf('Empfohlen', ['r1', 'r2']),
+           innertube.Shelf('Kürzlich hochgeladen', ['r3'])]
 
 SUBSCRIPTIONS_CACHE = os.path.join(support.PROFILE_DIR, 'subscriptions.json')
 
@@ -45,13 +49,24 @@ class BrowseTestCase(AddonTestCase):
         # Results of the data API calls by name, and an exception all of them
         # raise instead.
         self.results = {'subscriptions': CHANNELS, 'channel_videos': [VIDEO],
-                        'most_popular': [VIDEO], 'search': [VIDEO],
+                        'most_popular': [VIDEO], 'search': [VIDEO], 'videos': [VIDEO],
                         'subscribe': 'sub-new', 'unsubscribe': None}
         self.failure = None
         for name in self.results:
             patcher = mock.patch.object(dataapi, name, self._query(name))
             patcher.start()
             self.addCleanup(patcher.stop)
+
+        self.shelves = {innertube.RECOMMENDATIONS: SHELVES,
+                        innertube.HISTORY: [innertube.Shelf('', ['h2', 'h1'])]}
+        self.browsed = []
+        patcher = mock.patch.object(innertube, 'get_shelves', self._get_shelves)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _get_shelves(self, browse_id, language, region, access_token):
+        self.browsed.append((browse_id, access_token))
+        return self.shelves[browse_id]
 
     def _query(self, name):
         def query(*args, auth):
@@ -94,10 +109,12 @@ class RootTest(BrowseTestCase):
 
     def test_everything_is_offered_when_signed_in(self):
         items = self.dispatch()
-        self.assertEqual(self.labels(items), ['L30200', 'L30300', 'L30301'])
+        self.assertEqual(self.labels(items), ['L30200', 'L30400', 'L30300', 'L30301', 'L30401'])
         self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/subscriptions/',
+                                            'plugin://plugin.video.yt/recommended/',
                                             'plugin://plugin.video.yt/trending/',
-                                            'plugin://plugin.video.yt/search/'])
+                                            'plugin://plugin.video.yt/search/',
+                                            'plugin://plugin.video.yt/history/'])
 
     def test_an_api_key_is_enough_for_trending_and_search(self):
         self.sign_out(api_key='key-1')
@@ -261,6 +278,53 @@ class TrendingTest(BrowseTestCase):
         list_item = self.dispatch('trending')[0][1]
         self.assertEqual(self.queries, [('most_popular', ('', 100), 'key:key-1')])
         self.assertEqual(list_item.context_menu, [GO_TO_CHANNEL])
+
+
+class RecommendationsTest(BrowseTestCase):
+
+    def test_the_shelves_are_folders_named_and_pictured_like_on_youtube(self):
+        items = self.dispatch('recommended')
+        self.assertEqual(self.labels(items), ['Empfohlen', 'Kürzlich hochgeladen'])
+        self.assertEqual(self.urls(items)[1], 'plugin://plugin.video.yt/recommended/shelf/'
+                                              '?title=K%C3%BCrzlich+hochgeladen')
+        self.assertEqual(items[0][1].art['thumb'], 'https://i.ytimg.com/vi/r1/hqdefault.jpg')
+        self.assertEqual(self.browsed, [('FEwhat_to_watch', 'access-vr')])
+
+    def test_the_list_of_shelves_is_never_cached_by_kodi(self):
+        self.dispatch('recommended')
+        self.assertEqual(support.PLUGIN_STATE['category'], 'L30400')
+        self.assertFalse(support.PLUGIN_STATE['cacheToDisc'])
+
+    def test_a_shelf_lists_its_videos(self):
+        self.dispatch('recommended')
+        items = self.dispatch('recommended/shelf', '?title=Empfohlen')
+        self.assertEqual(self.queried('videos'), [(['r1', 'r2'],)])
+        self.assertEqual(self.labels(items), ['Never Gonna Give You Up'])
+        self.assertEqual(support.PLUGIN_STATE['category'], 'L30400 / Empfohlen')
+
+    def test_a_shelf_gone_meanwhile_finds_nothing(self):
+        self.dispatch('recommended')
+        self.results['videos'] = []
+        self.dispatch('recommended/shelf', '?title=Gone')
+        self.assertEqual(self.queried('videos'), [([],)])
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30107')])
+
+
+class HistoryTest(BrowseTestCase):
+
+    def test_the_videos_watched_last_are_listed(self):
+        items = self.dispatch('history')
+        self.assertEqual(self.browsed, [('FEhistory', 'access-vr')])
+        self.assertEqual(self.queried('videos'), [(['h2', 'h1'],)])
+        self.assertEqual(self.labels(items), ['Never Gonna Give You Up'])
+        self.assertEqual(support.PLUGIN_STATE['category'], 'L30401')
+
+    def test_without_sign_in_the_user_is_told(self):
+        self.sign_out(api_key='key-1')
+        self.dispatch('history')
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30105')])
+        self.assertFalse(support.PLUGIN_STATE['succeeded'])
+        self.assertEqual(self.browsed, [])
 
 
 class EmojiTest(BrowseTestCase):

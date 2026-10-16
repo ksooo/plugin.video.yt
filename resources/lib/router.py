@@ -22,6 +22,7 @@ import xbmcplugin
 from . import account
 from . import addon
 from . import dataapi
+from . import feeds
 from . import http
 from . import listing
 from . import playback
@@ -62,9 +63,12 @@ class Router:
         signed_in = account.is_signed_in()
         if signed_in:
             items.append(listing.folder_item(addon.localize(30200), 'subscriptions'))
+            items.append(listing.folder_item(addon.localize(30400), 'recommended'))
         if signed_in or addon.get_string_setting(addon.SETTING_API_KEY):
             items.append(listing.folder_item(addon.localize(30300), 'trending'))
             items.append(listing.folder_item(addon.localize(30301), 'search'))
+        if signed_in:
+            items.append(listing.folder_item(addon.localize(30401), 'history'))
         listing.finish_folders(self._handle, items, addon.ADDON_NAME)
 
     def _list_subscriptions(self):
@@ -101,6 +105,54 @@ class Router:
                               [listing.video_item(video, subscribed, link_channel=False)
                                for video in videos],
                               category)
+
+    def _list_recommendations(self):
+        """Show YouTube's shelves of recommendations for the account."""
+        access_token = self._feed_token()
+        if access_token is None:
+            return
+        shelves = self._query_data_api(
+            lambda auth: feeds.recommendation_shelves(access_token), need_account=True)
+        if shelves is None:
+            return
+
+        # The shelves change with every request, going back has to show the
+        # ones a shelf is opened from.
+        listing.finish_folders(self._handle,
+                               [listing.folder_item(shelf.title, 'recommended/shelf',
+                                                    listing.video_thumbnail(shelf.video_ids[0]),
+                                                    title=shelf.title)
+                                for shelf in shelves],
+                               addon.localize(30400), cache=False)
+
+    def _list_recommendation_shelf(self):
+        """Show the videos of a shelf of recommendations. Parameter: title."""
+        access_token = self._feed_token()
+        if access_token is None:
+            return
+        title = self._params.get('title', '')
+
+        def query(auth):
+            shelf = feeds.recommendation_shelf(title, access_token)
+            return dataapi.videos(shelf.video_ids if shelf else [], auth=auth)
+
+        self._list_videos(query, listing.breadcrumb(addon.localize(30400), title),
+                          nothing_found_label_id=30107, need_account=True)
+
+    def _list_history(self):
+        """Show the videos the account watched last, the latest first."""
+        access_token = self._feed_token()
+        if access_token is None:
+            return
+        self._list_videos(lambda auth: dataapi.videos(feeds.history(access_token), auth=auth),
+                          addon.localize(30401), need_account=True)
+
+    def _feed_token(self):
+        """Return the token InnerTube takes for the account's feeds, None if not signed in."""
+        access_token = account.access_token(account.VR)
+        if access_token is None:
+            self._fail(addon.localize(30105), listing_route=True)
+        return access_token
 
     def _list_trending(self):
         """Show the most popular videos in Kodi's region."""
@@ -142,7 +194,7 @@ class Router:
                           listing.breadcrumb(addon.localize(30301), query),
                           nothing_found_label_id=30107)
 
-    def _list_videos(self, query, category, nothing_found_label_id=None):
+    def _list_videos(self, query, category, nothing_found_label_id=None, need_account=False):
         """Show the videos of various channels query(auth) returns.
 
         With nothing_found_label_id, finding no video is reported with that
@@ -152,7 +204,7 @@ class Router:
             ids = subscriptions.subscription_ids(auth) if auth.token else None
             return query(auth), ids
 
-        result = self._query_data_api(videos_and_subscriptions)
+        result = self._query_data_api(videos_and_subscriptions, need_account=need_account)
         if result is None:
             return
 
@@ -258,6 +310,9 @@ _ROUTES = {
     '': Router._list_root,
     'subscriptions': Router._list_subscriptions,
     'channel': Router._list_channel,
+    'recommended': Router._list_recommendations,
+    'recommended/shelf': Router._list_recommendation_shelf,
+    'history': Router._list_history,
     'trending': Router._list_trending,
     'search': Router._list_search,
     'search/new': Router._new_search,
