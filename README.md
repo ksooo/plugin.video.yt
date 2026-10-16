@@ -5,9 +5,9 @@ as folders in Kodi's video window.
 
 ![icon](resources/icon.png)
 
-## Status
+## Folders
 
-Under construction. The top level offers:
+The top level offers:
 
 * **Subscriptions**, when signed in: the channels, below each channel its 100 newest videos -
   those of the channel's **Videos** tab on YouTube, so neither shorts nor live recordings.
