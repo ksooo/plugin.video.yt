@@ -165,7 +165,9 @@ def finish_videos(handle, items, category):
     xbmcplugin.setPluginCategory(handle, category)
     xbmcplugin.setContent(handle, CONTENT_VIDEOS)
     xbmcplugin.addDirectoryItems(handle, items, len(items))
-    for sort_method in (xbmcplugin.SORT_METHOD_UNSORTED, xbmcplugin.SORT_METHOD_DATE,
-                        xbmcplugin.SORT_METHOD_TITLE, xbmcplugin.SORT_METHOD_DURATION):
+    # The date beside each video, as Kodi shows it when sorting by date.
+    xbmcplugin.addSortMethod(handle, xbmcplugin.SORT_METHOD_UNSORTED, label2Mask='%J')
+    for sort_method in (xbmcplugin.SORT_METHOD_DATE, xbmcplugin.SORT_METHOD_TITLE,
+                        xbmcplugin.SORT_METHOD_DURATION):
         xbmcplugin.addSortMethod(handle, sort_method)
     xbmcplugin.endOfDirectory(handle)

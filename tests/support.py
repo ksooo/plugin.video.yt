@@ -235,8 +235,12 @@ xbmcplugin.setResolvedUrl = _set_resolved_url
 xbmcplugin.setPluginCategory = lambda handle, category: PLUGIN_STATE.__setitem__('category',
                                                                                 category)
 xbmcplugin.setContent = lambda handle, content: PLUGIN_STATE.__setitem__('content', content)
-xbmcplugin.addSortMethod = (
-    lambda handle, method, *args: PLUGIN_STATE.setdefault('sort_methods', []).append(method))
+def _add_sort_method(handle, sortMethod, labelMask='', label2Mask=''):
+    PLUGIN_STATE.setdefault('sort_methods', []).append(sortMethod)
+    PLUGIN_STATE.setdefault('label2_masks', {})[sortMethod] = label2Mask
+
+
+xbmcplugin.addSortMethod = _add_sort_method
 
 
 def reset_output():

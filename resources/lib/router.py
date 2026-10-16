@@ -99,6 +99,9 @@ class Router:
             return
 
         videos, subscribed = result
+        # Newest first as the default, Kodi offers no way to make its own date
+        # sorting start descending.
+        videos = sorted(videos, key=lambda video: video.published, reverse=True)
         category = title
         if self._params.get('parent') == 'subscriptions':
             category = listing.breadcrumb(addon.localize(30200), title)

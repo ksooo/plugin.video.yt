@@ -27,6 +27,14 @@ those in a playlist of its own: `UULF` followed by the channel id without its
 `UC`. It holds neither shorts (`UUSH`) nor live recordings (`UULV`), and
 does not exist for a channel without a single such video.
 
+Every video listing comes in an order of its own, which "Default", the first
+sort method, keeps: a channel newest first, the history last watched first,
+search, trending and recommendations in YouTube's order. Kodi's "Date" would
+not do for the channels: it starts descending for Kodi's own listings, but
+for a plugin's always ascending - `CFileItemList::AddSortMethod` hands over
+an ascending order, where `CGUIViewState::AddSortMethod` would pick
+descending for an unset one.
+
 There is no "next page" entry: a channel and a trending category show 100
 videos, a search 50, and that's it.
 

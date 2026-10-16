@@ -173,6 +173,16 @@ class ChannelTest(BrowseTestCase):
         return self.dispatch('channel',
                              '?id={}&title=Alpha+%26+Omega{}'.format(channel_id, parent))
 
+    def test_the_videos_come_newest_first_whatever_order_youtube_gives(self):
+        self.results['channel_videos'] = [
+            VIDEO._replace(video_id='old', published='2024-01-01T10:00:00Z'),
+            VIDEO._replace(video_id='new', published='2026-10-01T10:00:00Z'),
+            VIDEO._replace(video_id='mid', published='2025-06-01T10:00:00Z')]
+        self.assertEqual(self.urls(self.channel()),
+                         ['plugin://plugin.video.yt/play/?v=new',
+                          'plugin://plugin.video.yt/play/?v=mid',
+                          'plugin://plugin.video.yt/play/?v=old'])
+
     def test_the_newest_hundred_videos_of_the_channel_are_asked_for(self):
         self.channel()
         self.assertEqual(self.queried('channel_videos'), [('UC1', 100)])
@@ -208,6 +218,10 @@ class ChannelTest(BrowseTestCase):
         self.assertEqual(support.PLUGIN_STATE['content'], 'videos')
         self.assertEqual(support.PLUGIN_STATE['sort_methods'],
                          ['unsorted', 'date', 'title', 'duration'])
+
+    def test_the_default_order_shows_the_date_beside_each_video(self):
+        self.channel()
+        self.assertEqual(support.PLUGIN_STATE['label2_masks']['unsorted'], '%J')
 
     def test_the_breadcrumb_names_the_channel_below_the_subscriptions(self):
         self.channel()
