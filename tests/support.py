@@ -13,7 +13,9 @@ of resources.lib.
 """
 
 import os
+import shutil
 import sys
+import tempfile
 import types
 import unittest
 
@@ -24,6 +26,18 @@ PLUGIN_STATE = {}
 INFO_LABELS = {}
 LANGUAGE = ['de']
 ABORT_REQUESTED = [False]
+DEFAULT_SETTINGS = {
+    'api_key': '',
+    'client_id': '',
+    'client_secret': '',
+    'signed_in': False,
+}
+SETTINGS = dict(DEFAULT_SETTINGS)
+#: Progress dialogue events, and whether the user pressed cancel.
+PROGRESS = []
+PROGRESS_CANCELED = [False]
+
+PROFILE_DIR = os.path.join(tempfile.gettempdir(), 'plugin.video.yt-test-profile')
 
 
 def _make_module(name):
@@ -46,6 +60,9 @@ class Monitor:
     def abortRequested(self):
         return ABORT_REQUESTED[0]
 
+    def waitForAbort(self, timeout=None):
+        return ABORT_REQUESTED[0]
+
 
 xbmc.Monitor = Monitor
 
@@ -56,11 +73,20 @@ xbmcaddon = _make_module('xbmcaddon')
 ADDON_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+class Settings:
+    def getString(self, setting_id):
+        return SETTINGS[setting_id]
+
+    def setBool(self, setting_id, value):
+        SETTINGS[setting_id] = value
+
+
 class Addon:
     _INFO = {'id': 'plugin.video.yt',
              'name': 'YouTube',
              'icon': 'icon.png',
-             'path': ADDON_DIR}
+             'path': ADDON_DIR,
+             'profile': 'special://profile/addon_data/plugin.video.yt/'}
 
     def getAddonInfo(self, key):
         return self._INFO[key]
@@ -68,8 +94,16 @@ class Addon:
     def getLocalizedString(self, string_id):
         return 'L{}'.format(string_id)
 
+    def getSettings(self):
+        return Settings()
+
 
 xbmcaddon.Addon = Addon
+
+# -- xbmcvfs ------------------------------------------------------------------
+
+xbmcvfs = _make_module('xbmcvfs')
+xbmcvfs.translatePath = lambda path: PROFILE_DIR
 
 # -- xbmcgui ------------------------------------------------------------------
 
@@ -99,8 +133,23 @@ class Dialog:
         NOTIFICATIONS.append((heading, message))
 
 
+class DialogProgress:
+    def create(self, heading, message=''):
+        PROGRESS.append(('create', heading, message))
+
+    def update(self, percent, message=''):
+        PROGRESS.append(('update', percent, message))
+
+    def iscanceled(self):
+        return PROGRESS_CANCELED[0]
+
+    def close(self):
+        PROGRESS.append(('close',))
+
+
 xbmcgui.ListItem = ListItem
 xbmcgui.Dialog = Dialog
+xbmcgui.DialogProgress = DialogProgress
 
 # -- xbmcplugin ---------------------------------------------------------------
 
@@ -137,6 +186,11 @@ def reset():
     INFO_LABELS.clear()
     LANGUAGE[0] = 'de'
     ABORT_REQUESTED[0] = False
+    SETTINGS.clear()
+    SETTINGS.update(DEFAULT_SETTINGS)
+    del PROGRESS[:]
+    PROGRESS_CANCELED[0] = False
+    shutil.rmtree(PROFILE_DIR, ignore_errors=True)
 
 
 # -- YouTube data -------------------------------------------------------------
@@ -208,10 +262,13 @@ BASE_URL = 'plugin://plugin.video.yt/'
 
 
 class AddonTestCase(unittest.TestCase):
-    """Gives every test clean stubs."""
+    """Gives every test clean stubs and an empty profile."""
 
     def setUp(self):
         reset()
+
+    def tearDown(self):
+        shutil.rmtree(PROFILE_DIR, ignore_errors=True)
 
     def dispatch(self, route='', query=''):
         """Run the plugin for the given route and query and return its items."""

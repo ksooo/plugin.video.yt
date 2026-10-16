@@ -16,6 +16,61 @@ msgstr ""
 "Language: de_DE\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+# settings category
+msgctxt "#30000"
+msgid "Account"
+msgstr "Konto"
+
+# settings label
+msgctxt "#30010"
+msgid "API key"
+msgstr "API-Schlüssel"
+
+# settings help
+msgctxt "#30011"
+msgid "Key for the YouTube Data API from your own Google Cloud project."
+msgstr "Schlüssel für die YouTube Data API aus dem eigenen Google-Cloud-Projekt."
+
+# settings label
+msgctxt "#30012"
+msgid "Client ID"
+msgstr "Client-ID"
+
+# settings help
+msgctxt "#30013"
+msgid "ID of the OAuth client of the type \"TVs and Limited Input devices\" from your own Google Cloud project."
+msgstr "ID des OAuth-Clients vom Typ „TVs and Limited Input devices“ aus dem eigenen Google-Cloud-Projekt."
+
+# settings label
+msgctxt "#30014"
+msgid "Client secret"
+msgstr "Client-Secret"
+
+# settings help
+msgctxt "#30015"
+msgid "Secret of that OAuth client."
+msgstr "Secret dieses OAuth-Clients."
+
+# settings label
+msgctxt "#30016"
+msgid "Sign in"
+msgstr "Anmelden"
+
+# settings help
+msgctxt "#30017"
+msgid "Sign in to YouTube on another device with a code. Needs client ID and client secret."
+msgstr "Mit einem Code auf einem anderen Gerät bei YouTube anmelden. Setzt Client-ID und Client-Secret voraus."
+
+# settings label
+msgctxt "#30018"
+msgid "Sign out"
+msgstr "Abmelden"
+
+# settings help
+msgctxt "#30019"
+msgid "Sign out of YouTube and revoke the add-on's access to the account."
+msgstr "Bei YouTube abmelden und den Zugriff des Addons auf das Konto widerrufen."
+
 # notification, YouTube gave no reason
 msgctxt "#30100"
 msgid "This video cannot be played."
@@ -25,3 +80,53 @@ msgstr "Dieses Video kann nicht wiedergegeben werden."
 msgctxt "#30101"
 msgid "YouTube cannot be reached."
 msgstr "YouTube ist nicht erreichbar."
+
+# notification
+msgctxt "#30102"
+msgid "This video can only be played when signed in."
+msgstr "Dieses Video lässt sich nur mit Anmeldung wiedergeben."
+
+# sign-in dialogue heading, {0} = step, {1} = number of steps
+msgctxt "#30110"
+msgid "Sign in ({0} of {1})"
+msgstr "Anmelden ({0} von {1})"
+
+# sign-in dialogue, {0} = web address, {1} = code
+msgctxt "#30111"
+msgid "On a phone or computer, go to [B]{0}[/B] and enter the code [B]{1}[/B]."
+msgstr "Auf einem Smartphone oder Computer [B]{0}[/B] öffnen und den Code [B]{1}[/B] eingeben."
+
+# sign-in dialogue, purpose of step 1
+msgctxt "#30112"
+msgid "This grants access to your subscriptions."
+msgstr "Damit erhält das Addon Zugriff auf die Abos."
+
+# sign-in dialogue, purpose of step 2
+msgctxt "#30113"
+msgid "This grants YouTube's app for Meta Quest access, which plays age-restricted videos."
+msgstr "Damit erhält die YouTube-App für Meta Quest Zugriff, über die altersbeschränkte Videos wiedergegeben werden."
+
+# sign-in dialogue, while the code is requested
+msgctxt "#30114"
+msgid "Requesting a code…"
+msgstr "Code wird abgerufen …"
+
+# notification
+msgctxt "#30120"
+msgid "Signed in"
+msgstr "Angemeldet"
+
+# notification
+msgctxt "#30121"
+msgid "Signed out"
+msgstr "Abgemeldet"
+
+# notification
+msgctxt "#30122"
+msgid "Sign-in failed"
+msgstr "Anmeldung fehlgeschlagen"
+
+# notification
+msgctxt "#30123"
+msgid "The sign-in is no longer valid. Please sign in again."
+msgstr "Die Anmeldung ist nicht mehr gültig. Eine erneute Anmeldung ist nötig."

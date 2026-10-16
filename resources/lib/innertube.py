@@ -26,10 +26,12 @@ PLAYER_URL = 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false'
 class Client:
     """The identity of one of YouTube's apps."""
 
-    def __init__(self, client_id, context, user_agent, origin, params=None):
+    def __init__(self, client_id, context, user_agent, origin, params=None, account=None):
         self.client_id = client_id
         self.context = context
         self.params = params
+        #: Key of the account whose access token the app accepts, see account.py.
+        self.account = account
         #: Headers for fetching streams and manifests, matching the identity.
         self.stream_headers = {'User-Agent': user_agent, 'Origin': origin}
 
@@ -60,7 +62,8 @@ ANDROID = Client(
     'https://m.youtube.com',
     params='2AMB')
 
-#: The app for Meta Quest. Offers the original audio track only.
+#: The app for Meta Quest. Offers the original audio track only, but signed in
+#: it gets age-restricted videos too.
 ANDROID_VR = Client(
     '28',
     {
@@ -74,7 +77,8 @@ ANDROID_VR = Client(
     },
     'com.google.android.apps.youtube.vr.oculus/1.65.10 '
     '(Linux; U; Android 14; eureka-user Build/UP1A.231005.007.A1) gzip',
-    'https://www.youtube.com')
+    'https://www.youtube.com',
+    account='vr')
 
 #: Player clients by preference.
 PLAYER_CLIENTS = (ANDROID, ANDROID_VR)
@@ -85,37 +89,61 @@ Player = collections.namedtuple('Player', 'response client')
 _CPN_ALPHABET = string.ascii_letters + string.digits + '-_'
 
 
+#: Refusals that a signed-in client may get past, e.g. for age-restricted videos.
+_SIGN_IN_STATUSES = frozenset(('LOGIN_REQUIRED', 'AGE_CHECK_REQUIRED',
+                               'AGE_VERIFICATION_REQUIRED', 'CONTENT_CHECK_REQUIRED'))
+
+
 class PlayabilityError(Exception):
-    """YouTube refuses to play the video. The message is YouTube's reason, if it gave one."""
+    """YouTube refuses to play the video. The message is YouTube's reason, if it gave one.
+
+    sign_in_would_help tells whether YouTube asked for a sign-in while a client
+    that accepts one was asked without.
+    """
+
+    def __init__(self, reason, sign_in_would_help=False):
+        super().__init__(reason)
+        self.sign_in_would_help = sign_in_would_help
 
 
-def get_player(video_id, language, region):
+def get_player(video_id, language, region, access_token):
     """Return the player response of the first client YouTube serves the video to.
 
     language and region are ISO codes such as 'de' and 'DE'; YouTube words its
     reasons for refusing a video in that language. Either may be empty.
+    access_token(account) returns the token of a signed-in account, or None.
     """
     reasons = []
+    asked_for_sign_in = False
+    signed_out_client = False
     for client in PLAYER_CLIENTS:
-        response = _request_player(client, video_id, language, region)
+        token = access_token(client.account) if client.account else None
+        signed_out_client = signed_out_client or (client.account is not None and token is None)
+        response = _request_player(client, video_id, language, region, token)
         if not _is_playable(response, video_id):
             # Refusals such as YouTube's bot check carry a visitor id that
             # passes it.
             visitor_data = response.get('responseContext', {}).get('visitorData')
             if visitor_data:
-                response = _request_player(client, video_id, language, region, visitor_data)
+                response = _request_player(client, video_id, language, region, token,
+                                           visitor_data)
 
         if _is_playable(response, video_id):
             return Player(response, client)
 
-        reasons.append(response.get('playabilityStatus', {}).get('reason', ''))
+        status = response.get('playabilityStatus', {})
+        reasons.append(status.get('reason', ''))
+        asked_for_sign_in = asked_for_sign_in or status.get('status') in _SIGN_IN_STATUSES
 
-    raise PlayabilityError(next((reason for reason in reasons if reason), ''))
+    raise PlayabilityError(next((reason for reason in reasons if reason), ''),
+                           asked_for_sign_in and signed_out_client)
 
 
-def _request_player(client, video_id, language, region, visitor_data=None):
+def _request_player(client, video_id, language, region, token, visitor_data=None):
     context = dict(client.context)
     headers = client.api_headers
+    if token:
+        headers['Authorization'] = 'Bearer ' + token
     if language:
         context['hl'] = language
     if region:

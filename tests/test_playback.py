@@ -20,6 +20,7 @@ from tests.support import VP9_HDR_1080
 from tests.support import OPUS
 from tests.support import player_response
 
+from resources.lib import account
 from resources.lib import http
 from resources.lib import innertube
 from resources.lib import playback
@@ -53,8 +54,9 @@ class PlaybackTestCase(AddonTestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
-    def _get_player(self, video_id, language, region):
+    def _get_player(self, video_id, language, region, access_token):
         self.player_requests.append((video_id, language, region))
+        self.access_token = access_token
         if isinstance(self.response, Exception):
             raise self.response
         return innertube.Player(self.response, innertube.ANDROID_VR)
@@ -93,6 +95,10 @@ class VideoTest(PlaybackTestCase):
         support.INFO_LABELS['System.Locale(iso)'] = 'CH'
         self.play('xyz')
         self.assertEqual(self.player_requests, [('xyz', 'fr', 'CH')])
+
+    def test_the_signed_in_account_is_offered(self):
+        self.play()
+        self.assertIs(self.access_token, account.access_token)
 
     def test_hdr_is_the_default_on_an_hdr_display(self):
         self.response = player_response('abc', formats=(VP9_1080, VP9_HDR_1080, OPUS))
@@ -144,6 +150,12 @@ class FailureTest(PlaybackTestCase):
         resolved, _ = self.play()
         self.assertFalse(resolved)
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'Video unavailable')])
+
+    def test_the_need_to_sign_in_is_shown_instead_of_youtubes_reason(self):
+        self.response = innertube.PlayabilityError('This video may be inappropriate',
+                                                   sign_in_would_help=True)
+        self.play()
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30102')])
 
     def test_without_a_reason_a_generic_message_is_shown(self):
         self.response = innertube.PlayabilityError('')

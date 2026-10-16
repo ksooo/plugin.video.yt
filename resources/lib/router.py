@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 
 import xbmcplugin
 
+from . import account
 from . import addon
 from . import playback
 
@@ -48,8 +49,18 @@ class Router:
         """Play the video given by its id. Parameter: v."""
         playback.play(self._handle, self._params.get('v', ''))
 
+    def _sign_in(self):
+        """Sign in to YouTube, run from the settings."""
+        account.sign_in()
+
+    def _sign_out(self):
+        """Sign out of YouTube, run from the settings."""
+        account.sign_out()
+
 
 _ROUTES = {
     '': Router._list_root,
     'play': Router._play,
+    'signin': Router._sign_in,
+    'signout': Router._sign_out,
 }

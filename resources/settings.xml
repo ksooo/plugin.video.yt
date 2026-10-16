@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings version="1">
+  <section id="plugin.video.yt">
+    <category id="account" label="30000">
+      <group id="1">
+        <setting id="api_key" type="string" label="30010" help="30011">
+          <level>0</level>
+          <default/>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string">
+            <heading>30010</heading>
+          </control>
+        </setting>
+        <setting id="client_id" type="string" label="30012" help="30013">
+          <level>0</level>
+          <default/>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string">
+            <heading>30012</heading>
+          </control>
+        </setting>
+        <setting id="client_secret" type="string" label="30014" help="30015">
+          <level>0</level>
+          <default/>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string">
+            <heading>30014</heading>
+            <hidden>true</hidden>
+          </control>
+        </setting>
+      </group>
+      <group id="2">
+        <setting id="signin" type="action" label="30016" help="30017">
+          <level>0</level>
+          <data>RunPlugin(plugin://plugin.video.yt/signin)</data>
+          <dependencies>
+            <dependency type="enable">
+              <and>
+                <condition setting="client_id" operator="!is"></condition>
+                <condition setting="client_secret" operator="!is"></condition>
+                <condition setting="signed_in">false</condition>
+              </and>
+            </dependency>
+          </dependencies>
+          <control type="button" format="action">
+            <close>true</close>
+          </control>
+        </setting>
+        <setting id="signout" type="action" label="30018" help="30019">
+          <level>0</level>
+          <data>RunPlugin(plugin://plugin.video.yt/signout)</data>
+          <dependencies>
+            <dependency type="enable">
+              <condition setting="signed_in">true</condition>
+            </dependency>
+          </dependencies>
+          <control type="button" format="action">
+            <close>true</close>
+          </control>
+        </setting>
+        <!-- Level 4 would be the natural choice for a setting nobody edits, but a
+             boolean on level 4 keeps Kodi from saving the add-on's settings. -->
+        <setting id="signed_in" type="boolean">
+          <level>0</level>
+          <default>false</default>
+          <visible>false</visible>
+          <control type="toggle"/>
+        </setting>
+      </group>
+    </category>
+  </section>
+</settings>

@@ -7,13 +7,33 @@ as folders in Kodi's video window.
 
 ## Status
 
-Under construction. The add-on has no listings yet, but plays a video given by its id:
-`plugin://plugin.video.yt/play?v=<video id>`.
+Under construction. The add-on has no listings yet, but signs in and plays a video given by its
+id: `plugin://plugin.video.yt/play?v=<video id>`.
 
 ## Requirements
 
 Kodi 21 (Omega) or newer and the add-on `inputstream.adaptive`, which plays the videos. Requiring
 version 21 of `inputstream.adaptive` is also what keeps the add-on off older Kodi versions.
+
+## Setup
+
+The add-on brings no access to YouTube of its own. It uses the YouTube Data API with your own
+Google Cloud project, which is free:
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), create a project and enable
+   the **YouTube Data API v3** for it.
+2. Under **APIs & Services ▸ Credentials**, create an **API key**.
+3. Under **Google Auth Platform**, set up the consent screen. On **Audience**, publish the app
+   (**In production**). While it stays in **Testing**, Google lets a sign-in expire after seven
+   days. Publishing asks for a home page and a privacy policy URL on the **Branding** page. A
+   Google Workspace account can choose the user type **Internal** instead and skip all that.
+4. Under **Clients**, create an OAuth client of the type **TVs and Limited Input devices**.
+5. In the add-on settings, under **Account**, enter the API key, the client ID and the client
+   secret, then choose **Sign in**.
+
+Signing in takes two codes, entered one after the other on a phone or computer. The first grants
+your own OAuth client access to the account. The second grants it to YouTube's app for Meta Quest,
+whose identity the add-on uses to play age-restricted videos. **Sign out** revokes both.
 
 ## Trademark
 

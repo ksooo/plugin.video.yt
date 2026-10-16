@@ -14,6 +14,7 @@ import xbmc
 import xbmcgui
 import xbmcplugin
 
+from . import account
 from . import addon
 from . import http
 from . import innertube
@@ -31,10 +32,14 @@ def play(handle, video_id):
     """Resolve the plugin URL of the video for Kodi's player."""
     try:
         player = innertube.get_player(video_id, xbmc.getLanguage(xbmc.ISO_639_1),
-                                      xbmc.getInfoLabel('System.Locale(iso)'))
+                                      xbmc.getInfoLabel('System.Locale(iso)'),
+                                      account.access_token)
     except innertube.PlayabilityError as error:
         addon.log('{} not playable: {}'.format(video_id, error))
-        _fail(handle, str(error) or addon.localize(30100))
+        if error.sign_in_would_help:
+            _fail(handle, addon.localize(30102))
+        else:
+            _fail(handle, str(error) or addon.localize(30100))
         return
     except http.RequestError as error:
         addon.log_error(str(error))

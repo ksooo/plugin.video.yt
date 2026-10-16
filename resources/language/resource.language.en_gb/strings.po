@@ -16,6 +16,61 @@ msgstr ""
 "Language: en_GB\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+# settings category
+msgctxt "#30000"
+msgid "Account"
+msgstr ""
+
+# settings label
+msgctxt "#30010"
+msgid "API key"
+msgstr ""
+
+# settings help
+msgctxt "#30011"
+msgid "Key for the YouTube Data API from your own Google Cloud project."
+msgstr ""
+
+# settings label
+msgctxt "#30012"
+msgid "Client ID"
+msgstr ""
+
+# settings help
+msgctxt "#30013"
+msgid "ID of the OAuth client of the type \"TVs and Limited Input devices\" from your own Google Cloud project."
+msgstr ""
+
+# settings label
+msgctxt "#30014"
+msgid "Client secret"
+msgstr ""
+
+# settings help
+msgctxt "#30015"
+msgid "Secret of that OAuth client."
+msgstr ""
+
+# settings label
+msgctxt "#30016"
+msgid "Sign in"
+msgstr ""
+
+# settings help
+msgctxt "#30017"
+msgid "Sign in to YouTube on another device with a code. Needs client ID and client secret."
+msgstr ""
+
+# settings label
+msgctxt "#30018"
+msgid "Sign out"
+msgstr ""
+
+# settings help
+msgctxt "#30019"
+msgid "Sign out of YouTube and revoke the add-on's access to the account."
+msgstr ""
+
 # notification, YouTube gave no reason
 msgctxt "#30100"
 msgid "This video cannot be played."
@@ -24,4 +79,54 @@ msgstr ""
 # notification
 msgctxt "#30101"
 msgid "YouTube cannot be reached."
+msgstr ""
+
+# notification
+msgctxt "#30102"
+msgid "This video can only be played when signed in."
+msgstr ""
+
+# sign-in dialogue heading, {0} = step, {1} = number of steps
+msgctxt "#30110"
+msgid "Sign in ({0} of {1})"
+msgstr ""
+
+# sign-in dialogue, {0} = web address, {1} = code
+msgctxt "#30111"
+msgid "On a phone or computer, go to [B]{0}[/B] and enter the code [B]{1}[/B]."
+msgstr ""
+
+# sign-in dialogue, purpose of step 1
+msgctxt "#30112"
+msgid "This grants access to your subscriptions."
+msgstr ""
+
+# sign-in dialogue, purpose of step 2
+msgctxt "#30113"
+msgid "This grants YouTube's app for Meta Quest access, which plays age-restricted videos."
+msgstr ""
+
+# sign-in dialogue, while the code is requested
+msgctxt "#30114"
+msgid "Requesting a code…"
+msgstr ""
+
+# notification
+msgctxt "#30120"
+msgid "Signed in"
+msgstr ""
+
+# notification
+msgctxt "#30121"
+msgid "Signed out"
+msgstr ""
+
+# notification
+msgctxt "#30122"
+msgid "Sign-in failed"
+msgstr ""
+
+# notification
+msgctxt "#30123"
+msgid "The sign-in is no longer valid. Please sign in again."
 msgstr ""

@@ -7,6 +7,24 @@ dispatched by `router.py`. Kodi stores resume points and play counts under the
 plugin URL of a video, so these URLs are part of the user's data: changing the
 URL of a video loses its resume point and play count.
 
+## Signing in
+
+`oauth.py` implements Google's OAuth flow for limited-input devices; signing
+in runs it twice (`account.py`):
+
+1. With the user's own OAuth client, for the YouTube Data API.
+2. With the OAuth client of YouTube's app for Meta Quest, `oauth.YOUTUBE_VR`.
+   YouTube accepts a token only from the app it was issued for, and the
+   Quest app is the one that plays age-restricted videos when signed in.
+   Should YouTube ever retire that client, signing in fails at step 2 with
+   `invalid_client` in the log.
+
+The tokens live in `tokens.json` in the profile directory, never in the
+settings. The hidden setting `signed_in` only mirrors whether that file holds
+a sign-in, so the settings dialogue can enable the right button. When Google
+refuses to renew a token - the user revoked the access, or changed the client
+in the settings - the add-on signs out and says so.
+
 ## Playback
 
 ### InnerTube - expect breakage here
@@ -19,7 +37,9 @@ order of `PLAYER_CLIENTS`:
 
 1. `ANDROID` with the params `2AMB`. Offers every format and every audio
    track, dubbed ones included. Without the params it needs a PO token.
-2. `ANDROID_VR`, the app for Meta Quest. Offers the original audio track only.
+2. `ANDROID_VR`, the app for Meta Quest. Offers the original audio track only,
+   but is asked signed in when there is a sign-in, which unlocks
+   age-restricted videos.
 
 When YouTube refuses a client, typically with "Sign in to confirm you're not a
 bot", the request is repeated once with the visitor id from the refusal, which

@@ -8,19 +8,44 @@
 #
 """Thin convenience layer around the Kodi add-on API."""
 
+import os
+
 import xbmc
 import xbmcaddon
 import xbmcgui
+import xbmcvfs
 
 ADDON = xbmcaddon.Addon()
 ADDON_ID = ADDON.getAddonInfo('id')
 ADDON_NAME = ADDON.getAddonInfo('name')
 ADDON_ICON = ADDON.getAddonInfo('icon')
 
+# Setting identifiers, must match resources/settings.xml.
+SETTING_CLIENT_ID = 'client_id'
+SETTING_CLIENT_SECRET = 'client_secret'
+SETTING_SIGNED_IN = 'signed_in'
+
 
 def localize(string_id):
     """Return the localised string with the given identifier."""
     return ADDON.getLocalizedString(string_id)
+
+
+def get_string_setting(setting_id):
+    """Return the value of a text setting, stripped of stray whitespace."""
+    return ADDON.getSettings().getString(setting_id).strip()
+
+
+def set_bool_setting(setting_id, value):
+    """Change a boolean setting."""
+    ADDON.getSettings().setBool(setting_id, value)
+
+
+def profile_path(file_name):
+    """Return the full path of a file in the add-on's profile directory, creating that."""
+    directory = xbmcvfs.translatePath(ADDON.getAddonInfo('profile'))
+    os.makedirs(directory, exist_ok=True)
+    return os.path.join(directory, file_name)
 
 
 def log(message, level=xbmc.LOGDEBUG):
