@@ -188,10 +188,10 @@ def _shelf(section):
                  if 'videoId' in item.get('compactVideoRenderer', {})]
     if not video_ids:
         return None
-    return Shelf(_text(renderer.get('title')), video_ids)
+    return Shelf(text(renderer.get('title')), video_ids)
 
 
-def _text(node):
+def text(node):
     """Return the text of a text node, which InnerTube gives as simpleText or as runs."""
     if not node:
         return ''

@@ -27,6 +27,20 @@ A video's context menu goes to its channel and, when signed in, subscribes to or
 from it. A channel's context menu in the subscriptions unsubscribes from it. Any video plays from
 `plugin://plugin.video.yt/play/?v=<video id>`.
 
+## Playback
+
+Videos play through `inputstream.adaptive`, which picks the resolution the connection and the
+display allow. Kodi's own dialogues switch between:
+
+* **Video**: one entry per codec, and HDR as an entry of its own where a video has it. The
+  setting **Playback ▸ Video codecs** chooses the codecs offered - VP9 and H.264 by default; AV1
+  only plays smoothly where the device decodes it in hardware.
+* **Audio**: one entry per audio track - the original and any dubbed one -, plus one for surround
+  sound where a video has it.
+* **Subtitles**: the subtitles made for the video, and those YouTube recognized from the speech.
+
+Kodi remembers where you stopped and which videos you watched, as for any other video.
+
 ## Requirements
 
 Kodi 21 (Omega) or newer and the add-on `inputstream.adaptive`, which plays the videos. Requiring

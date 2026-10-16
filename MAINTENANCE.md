@@ -177,6 +177,19 @@ itself, on `127.0.0.1` and a port the system picks. Kodi lets a plugin run on
 after `setResolvedUrl`, which is what makes this work without a background
 service.
 
+Subtitles come from the player response's `captionTracks`: every track made
+for the video plus the one recognized from the speech (`kind: asr`); the
+machine translations YouTube offers on top are left out. Each is a whole
+file, the track's `baseUrl` with `fmt` replaced - the parameter is not part of
+the URL's signature. Tracks made for the video come as WebVTT (`fmt=vtt`).
+The recognized track comes as TTML (`fmt=ttml`): its WebVTT times every word,
+positions every cue and starts each with a line holding a blank, and Kodi
+shows nothing of it. ISA wants such a file's URL on the Representation, not
+further up, where it would append a slash.
+
+The video codecs offered come from the setting `video_codecs`; the order of
+preference among them is fixed in `manifest.VIDEO_CODEC_ORDER`.
+
 Kodi-version notes:
 
 * The `name`, `default`, `original` and `impaired` attributes of an

@@ -27,9 +27,18 @@ NS = {'dash': 'urn:mpeg:dash:schema:mpd:2011'}
 ALL_VIDEO_CODECS = ('av1', 'vp9', 'avc1')
 
 
-def build(formats, video_codecs=('vp9', 'avc1'), prefer_hdr=False):
-    mpd = manifest.build(formats, video_codecs, prefer_hdr)
+def build(formats, video_codecs=('vp9', 'avc1'), prefer_hdr=False, captions=()):
+    mpd = manifest.build(formats, list(captions), video_codecs, prefer_hdr)
     return None if mpd is None else ElementTree.fromstring(mpd)
+
+
+def caption(language, name, kind=None):
+    track = {'baseUrl': 'https://www.youtube.com/api/timedtext?v=abc&lang={}&fmt=srv3'
+                        '&signature=xyz'.format(language),
+             'languageCode': language, 'name': {'runs': [{'text': name}]}}
+    if kind:
+        track['kind'] = kind
+    return track
 
 
 def adaptation_sets(mpd, content_type):
@@ -143,6 +152,48 @@ class HdrTest(unittest.TestCase):
         video = adaptation_sets(build([VP9_1080, VP9_HDR_1080, OPUS], prefer_hdr=True), 'video')
         self.assertEqual(video[0].get('name'), 'VP9 HDR10')
         self.assertEqual(video[0].get('default'), 'true')
+
+
+class SubtitleTest(unittest.TestCase):
+
+    CAPTIONS = [caption('de', 'Deutsch'), caption('en', 'Englisch'),
+                caption('en', 'Englisch (automatisch erzeugt)', kind='asr')]
+
+    def subtitles(self):
+        return adaptation_sets(build([VP9_1080, OPUS], captions=self.CAPTIONS), 'text')
+
+    def test_every_caption_track_is_offered(self):
+        self.assertEqual([(adaptation_set.get('lang'), adaptation_set.get('name'))
+                          for adaptation_set in self.subtitles()],
+                         [('de', 'Deutsch'), ('en', 'Englisch'),
+                          ('en', 'Englisch (automatisch erzeugt)')])
+
+    def test_tracks_are_whole_webvtt_files_with_the_url_on_the_representation(self):
+        subtitles = self.subtitles()[0]
+        self.assertEqual(subtitles.get('mimeType'), 'text/vtt')
+        self.assertIsNone(subtitles.find('dash:BaseURL', NS))
+        url = subtitles.find('dash:Representation/dash:BaseURL', NS).text
+        self.assertEqual(url, 'https://www.youtube.com/api/timedtext'
+                              '?v=abc&lang=de&fmt=vtt&signature=xyz')
+
+    def test_a_recognized_track_comes_as_ttml(self):
+        subtitles = self.subtitles()[2]
+        self.assertEqual(subtitles.get('mimeType'), 'application/ttml+xml')
+        url = subtitles.find('dash:Representation/dash:BaseURL', NS).text
+        self.assertIn('&fmt=ttml&', url)
+
+    def test_no_track_is_the_default_kodi_chooses(self):
+        self.assertEqual([adaptation_set.get('default') for adaptation_set in self.subtitles()],
+                         [None, None, None])
+
+    def test_set_ids_go_on_after_audio(self):
+        mpd = build([VP9_1080, OPUS], captions=self.CAPTIONS)
+        self.assertEqual([adaptation_set.get('id')
+                          for adaptation_set in mpd.iterfind('.//dash:AdaptationSet', NS)],
+                         ['0', '1', '2', '3', '4'])
+
+    def test_without_captions_there_are_no_subtitles(self):
+        self.assertEqual(adaptation_sets(build([VP9_1080, OPUS]), 'text'), [])
 
 
 class AudioTest(unittest.TestCase):

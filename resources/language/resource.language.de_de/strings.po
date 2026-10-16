@@ -21,6 +21,11 @@ msgctxt "#30000"
 msgid "Account"
 msgstr "Konto"
 
+# settings category
+msgctxt "#30002"
+msgid "Playback"
+msgstr "Wiedergabe"
+
 # settings label
 msgctxt "#30010"
 msgid "API key"
@@ -70,6 +75,31 @@ msgstr "Abmelden"
 msgctxt "#30019"
 msgid "Sign out of YouTube and revoke the add-on's access to the account."
 msgstr "Bei YouTube abmelden und den Zugriff des Addons auf das Konto widerrufen."
+
+# settings label
+msgctxt "#30030"
+msgid "Video codecs"
+msgstr "Videocodecs"
+
+# settings help
+msgctxt "#30031"
+msgid "The video codecs offered for playback; of those a video comes in, the most efficient is preferred. AV1 only plays smoothly on devices that decode it in hardware."
+msgstr "Die Videocodecs, die zur Wiedergabe angeboten werden; von denen, in denen ein Video vorliegt, wird der effizienteste bevorzugt. AV1 läuft nur auf Geräten flüssig, die es in Hardware decodieren."
+
+# settings option, a video codec
+msgctxt "#30032"
+msgid "AV1"
+msgstr "AV1"
+
+# settings option, a video codec
+msgctxt "#30033"
+msgid "VP9"
+msgstr "VP9"
+
+# settings option, a video codec
+msgctxt "#30034"
+msgid "H.264"
+msgstr "H.264"
 
 # notification, YouTube gave no reason
 msgctxt "#30100"

@@ -17,12 +17,20 @@ has to be a real choice. Video gets one per codec and transfer function. Audio
 gets one per audio track in stereo and one in surround, each in the most
 preferred codec available: Kodi decodes every audio codec in software, so a
 second codec for the same sound would be no choice.
+
+Subtitles get one per caption track as a whole file: the tracks made for the
+video, and the one YouTube recognized from the speech. YouTube's machine
+translations of them are left out.
 """
 
 import re
 import xml.etree.ElementTree as ElementTree
 from urllib.parse import parse_qs
+from urllib.parse import parse_qsl
+from urllib.parse import urlencode
 from urllib.parse import urlsplit
+
+from . import innertube
 
 #: Codec families by preference. The first one available is the default.
 VIDEO_CODEC_ORDER = ('av1', 'vp9', 'avc1')
@@ -61,11 +69,12 @@ _ROLE_DESCRIPTION = '2'
 _MIME_TYPE = re.compile(r'^(?P<mime>[\w-]+/[\w.+-]+);\s*codecs="(?P<codecs>[^"]+)"$')
 
 
-def build(formats, video_codecs, prefer_hdr):
+def build(formats, captions, video_codecs, prefer_hdr):
     """Return the MPD for the adaptive formats, or None without video or audio.
 
-    video_codecs is the collection of video codec families allowed, prefer_hdr
-    makes an HDR AdaptationSet the default one when there is one.
+    captions are the captionTracks of the player response. video_codecs is the
+    collection of video codec families allowed, prefer_hdr makes an HDR
+    AdaptationSet the default one when there is one.
     """
     video_sets = {}
     audio_sets = {}
@@ -110,6 +119,9 @@ def build(formats, video_codecs, prefer_hdr):
 
     for index, key in enumerate(sorted(audio_sets, key=audio_rank), start=len(video_sets)):
         _add_audio_set(period, index, key, audio_sets[key], index == len(video_sets))
+
+    for index, track in enumerate(captions, start=len(video_sets) + len(audio_sets)):
+        _add_subtitle_set(period, index, track)
 
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + ElementTree.tostring(mpd, encoding='unicode')
 
@@ -196,6 +208,30 @@ def _add_audio_set(period, index, key, formats, is_default):
             'value': str(data.get('audioChannels', 2)),
         })
         _add_segment_base(representation, data)
+
+
+def _add_subtitle_set(period, index, track):
+    # YouTube's WebVTT of a recognized track times every word, positions the
+    # cues and starts each with a line holding a blank, which hides the text
+    # in Kodi. Its TTML of the same track is plain lines.
+    mime, caption_format = (('application/ttml+xml', 'ttml') if track.get('kind') == 'asr'
+                            else ('text/vtt', 'vtt'))
+    adaptation_set = _add_adaptation_set(period, index, 'text', mime,
+                                         innertube.text(track.get('name')), is_default=False)
+    adaptation_set.set('lang', track['languageCode'])
+    representation = ElementTree.SubElement(adaptation_set, 'Representation',
+                                            {'id': 'subtitles-{}'.format(index)})
+    # ISA takes a whole file only from a Representation's BaseURL; one further
+    # up would get a slash appended.
+    ElementTree.SubElement(representation, 'BaseURL').text = _caption_url(track['baseUrl'],
+                                                                          caption_format)
+
+
+def _caption_url(url, caption_format):
+    """Ask for the format instead of the one named in the URL; fmt is not signed."""
+    parts = urlsplit(url)
+    params = dict(parse_qsl(parts.query), fmt=caption_format)
+    return parts._replace(query=urlencode(params)).geturl()
 
 
 def _add_adaptation_set(period, index, content_type, mime, name, is_default):

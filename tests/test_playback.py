@@ -108,6 +108,26 @@ class VideoTest(PlaybackTestCase):
         default = mpd.find(".//{urn:mpeg:dash:schema:mpd:2011}AdaptationSet[@default='true']")
         self.assertEqual(default.get('name'), 'VP9 HDR10')
 
+    def manifest(self):
+        return ElementTree.fromstring(FakeManifestServer.instances[0].manifest)
+
+    def test_the_video_codecs_are_those_of_the_setting(self):
+        support.SETTINGS['video_codecs'] = ['avc1']
+        self.play()
+        codecs = [representation.get('codecs') for representation in self.manifest().iterfind(
+            ".//{urn:mpeg:dash:schema:mpd:2011}AdaptationSet[@contentType='video']/"
+            "{urn:mpeg:dash:schema:mpd:2011}Representation")]
+        self.assertEqual(codecs, ['avc1.640028'])
+
+    def test_the_caption_tracks_become_subtitles(self):
+        self.response['captions'] = {'playerCaptionsTracklistRenderer': {'captionTracks': [
+            {'baseUrl': 'https://www.youtube.com/api/timedtext?v=abc&fmt=srv3',
+             'languageCode': 'de', 'name': {'simpleText': 'Deutsch'}}]}}
+        self.play()
+        subtitles = self.manifest().find(
+            ".//{urn:mpeg:dash:schema:mpd:2011}AdaptationSet[@contentType='text']")
+        self.assertEqual((subtitles.get('lang'), subtitles.get('name')), ('de', 'Deutsch'))
+
     def test_without_usable_formats_playback_fails(self):
         self.response = player_response('abc', formats=(OPUS,))
         resolved, _ = self.play()

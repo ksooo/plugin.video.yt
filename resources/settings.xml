@@ -74,5 +74,25 @@
         </setting>
       </group>
     </category>
+    <category id="playback" label="30002">
+      <group id="1">
+        <setting id="video_codecs" type="list[string]" label="30030" help="30031">
+          <level>0</level>
+          <default>vp9,avc1</default>
+          <constraints>
+            <options>
+              <option label="30032">av1</option>
+              <option label="30033">vp9</option>
+              <option label="30034">avc1</option>
+            </options>
+            <delimiter>,</delimiter>
+            <minimumitems>1</minimumitems>
+          </constraints>
+          <control type="list" format="string">
+            <multiselect>true</multiselect>
+          </control>
+        </setting>
+      </group>
+    </category>
   </section>
 </settings>

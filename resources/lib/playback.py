@@ -21,9 +21,6 @@ from . import innertube
 from . import manifest
 from .manifestserver import ManifestServer
 
-#: Video codec families put into the manifest.
-VIDEO_CODECS = ('vp9', 'avc1')
-
 #: ISA fetches the manifest right after the URL is resolved.
 MANIFEST_TIMEOUT_SECONDS = 30
 
@@ -51,7 +48,10 @@ def play(handle, video_id):
     if player.response['videoDetails'].get('isLive'):
         _play_live(handle, streaming_data.get('hlsManifestUrl'), headers)
     else:
-        _play_video(handle, video_id, streaming_data.get('adaptiveFormats', []), headers)
+        captions = player.response.get('captions', {}).get(
+            'playerCaptionsTracklistRenderer', {}).get('captionTracks', [])
+        _play_video(handle, video_id, streaming_data.get('adaptiveFormats', []), captions,
+                    headers)
 
 
 def _play_live(handle, hls_url, headers):
@@ -64,8 +64,9 @@ def _play_live(handle, hls_url, headers):
     xbmcplugin.setResolvedUrl(handle, True, list_item)
 
 
-def _play_video(handle, video_id, formats, headers):
-    mpd = manifest.build(formats, VIDEO_CODECS,
+def _play_video(handle, video_id, formats, captions, headers):
+    mpd = manifest.build(formats, captions,
+                         addon.get_string_list_setting(addon.SETTING_VIDEO_CODECS),
                          prefer_hdr=bool(xbmc.getInfoLabel('System.SupportedHDRTypes')))
     if mpd is None:
         addon.log('{} has no usable formats'.format(video_id))

@@ -37,6 +37,7 @@ DEFAULT_SETTINGS = {
     'client_id': '',
     'client_secret': '',
     'signed_in': False,
+    'video_codecs': ['vp9', 'avc1'],
 }
 SETTINGS = dict(DEFAULT_SETTINGS)
 #: Progress dialogue events, and whether the user pressed cancel.
@@ -82,6 +83,9 @@ ADDON_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class Settings:
     def getString(self, setting_id):
+        return SETTINGS[setting_id]
+
+    def getStringList(self, setting_id):
         return SETTINGS[setting_id]
 
     def setBool(self, setting_id, value):
