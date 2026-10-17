@@ -94,7 +94,7 @@ msgstr "Videocodecs"
 # settings help
 msgctxt "#30031"
 msgid "The video codecs offered for playback; of those a video comes in, the most efficient is preferred. AV1 only plays smoothly on devices that decode it in hardware."
-msgstr "Die Videocodecs, die zur Wiedergabe angeboten werden; von denen, in denen ein Video vorliegt, wird der effizienteste bevorzugt. AV1 läuft nur auf Geräten flüssig, die es in Hardware decodieren."
+msgstr "Die Videocodecs, die zur Wiedergabe angeboten werden. Liegt ein Video in mehreren davon vor, wird der effizienteste bevorzugt. AV1 läuft nur auf Geräten flüssig, die es in Hardware decodieren."
 
 # settings option, a video codec
 msgctxt "#30032"
