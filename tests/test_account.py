@@ -18,6 +18,7 @@ from tests.support import AddonTestCase
 from tests.support import tokens
 
 from resources.lib import account
+from resources.lib import feeds
 from resources.lib import http
 from resources.lib import oauth
 
@@ -133,6 +134,16 @@ class SignOutTest(AccountTestCase):
             cache_file.write('{}')
         self.dispatch('signout')
         self.assertFalse(os.path.exists(cache))
+
+    def test_the_kept_feeds_of_the_account_go_too(self):
+        support.store_tokens(user=tokens('user'), vr=tokens('vr'))
+        caches = [os.path.join(support.PROFILE_DIR, file_name)
+                  for file_name in (feeds.SHELVES_FILE, feeds.PROGRESS_FILE)]
+        for cache in caches:
+            with open(cache, 'w', encoding='utf-8') as cache_file:
+                cache_file.write('{}')
+        self.dispatch('signout')
+        self.assertEqual([cache for cache in caches if os.path.exists(cache)], [])
 
 
 class AccessTokenTest(AccountTestCase):

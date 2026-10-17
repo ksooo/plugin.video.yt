@@ -122,6 +122,10 @@ a sign-in, so the settings dialogue can enable the right button. When Google
 refuses to renew a token - the user revoked the access, or changed the client
 in the settings - the add-on signs out and says so.
 
+Signing out also forgets what is kept of the account besides the tokens: the
+subscriptions, and the recommendations and watch progress in Kodi's temp
+directory, so another account signing in does not see them.
+
 ## Playback
 
 ### InnerTube - expect breakage here

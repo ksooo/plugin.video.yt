@@ -21,6 +21,7 @@ import xbmc
 import xbmcgui
 
 from . import addon
+from . import feeds
 from . import http
 from . import oauth
 
@@ -161,9 +162,12 @@ def _save(tokens):
 
 
 def _forget():
-    for file_name in (TOKENS_FILE, SUBSCRIPTIONS_FILE):
+    # The feeds kept in Kodi's temp directory belong to the account too.
+    paths = [addon.profile_path(TOKENS_FILE), addon.profile_path(SUBSCRIPTIONS_FILE),
+             addon.temp_path(feeds.SHELVES_FILE), addon.temp_path(feeds.PROGRESS_FILE)]
+    for path in paths:
         try:
-            os.remove(addon.profile_path(file_name))
+            os.remove(path)
         except FileNotFoundError:
             pass
     addon.set_bool_setting(addon.SETTING_SIGNED_IN, False)
