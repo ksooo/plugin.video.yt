@@ -22,6 +22,7 @@ from . import http
 
 PLAYER_URL = 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false'
 BROWSE_URL = 'https://www.youtube.com/youtubei/v1/browse?prettyPrint=false'
+FEEDBACK_URL = 'https://www.youtube.com/youtubei/v1/feedback?prettyPrint=false'
 
 #: Browse ids of the account's feeds.
 RECOMMENDATIONS = 'FEwhat_to_watch'
@@ -169,24 +170,42 @@ def get_watch_progress(language, region, access_token):
     account ANDROID_VR accepts.
     """
     progress = {}
-    for section in _browse(HISTORY, language, region, access_token):
-        for video in _videos(_section_content(section)[1]):
-            percent = _percent_watched(video)
-            if percent is not None:
-                progress.setdefault(video['videoId'], percent)
+    for video in _history_videos(language, region, access_token):
+        percent = _percent_watched(video)
+        if percent is not None:
+            progress.setdefault(video['videoId'], percent)
     return progress
 
 
-def get_playback_tracking(video_id, language, region, access_token):
-    """Return the URLs that report playing the video to the account's watch history.
+def remove_from_history(video_id, language, region, access_token):
+    """Remove every viewing of the video from the first page of the account's watch history.
 
-    None if YouTube refuses the video. access_token is the token of the account
-    ANDROID_VR accepts; the URLs only work with it.
+    Returns whether the video was there. access_token is the token of the
+    account ANDROID_VR accepts.
+    """
+    viewings = [video for video in _history_videos(language, region, access_token)
+                if video['videoId'] == video_id]
+    tokens = [token for token in map(_feedback_token, viewings) if token]
+    if not tokens:
+        return False
+
+    client = ANDROID_VR
+    http.post_json(FEEDBACK_URL, {
+        'context': {'client': _context(client, language, region)},
+        'feedbackTokens': tokens,
+    }, dict(client.api_headers, Authorization='Bearer ' + access_token))
+    return True
+
+
+def get_signed_in_player(video_id, language, region, access_token):
+    """Return the player response of ANDROID_VR signed in, None if YouTube refuses the video.
+
+    Its playbackTracking holds the URLs that report playing the video to the
+    account's watch history; they only work with access_token, the token of
+    the account ANDROID_VR accepts.
     """
     response = _request_player(ANDROID_VR, video_id, language, region, access_token)
-    if not _is_playable(response, video_id):
-        return None
-    return response.get('playbackTracking')
+    return response if _is_playable(response, video_id) else None
 
 
 def new_cpn():
@@ -209,6 +228,22 @@ def _browse(browse_id, language, region, access_token):
         sections.extend(tab.get('tabRenderer', {}).get('content', {}).get(
             'sectionListRenderer', {}).get('contents', []))
     return sections
+
+
+def _history_videos(language, region, access_token):
+    """Return the renderers of the videos on the first page of the account's watch history."""
+    return [video for section in _browse(HISTORY, language, region, access_token)
+            for video in _videos(_section_content(section)[1])]
+
+
+def _feedback_token(video):
+    """Return the token of the menu entry that removes a video from the history, if any."""
+    for entry in video.get('menu', {}).get('menuRenderer', {}).get('items', []):
+        endpoint = entry.get('menuServiceItemRenderer', {}).get('serviceEndpoint', {})
+        token = endpoint.get('feedbackEndpoint', {}).get('feedbackToken')
+        if token:
+            return token
+    return None
 
 
 def _section_content(section):

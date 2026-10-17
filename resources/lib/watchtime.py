@@ -60,6 +60,13 @@ class _Report:
             addon.log_error('reporting playback failed: {}'.format(error))
 
 
+def report(tracking, position):
+    """Report a playback that watched the video from the start up to position, in seconds."""
+    playback = _Report(tracking)
+    playback.started()
+    playback.watched(0, position, 'stopped')
+
+
 def follow(url, tracking):
     """Report the playback of url to the watch history for as long as Kodi plays it.
 

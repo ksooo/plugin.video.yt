@@ -169,14 +169,14 @@ class PlayerTest(unittest.TestCase):
 
     def test_the_urls_reporting_playback_come_from_the_signed_in_vr_app(self):
         self.responses['ANDROID_VR'] = dict(player_response('abc'), playbackTracking=TRACKING)
-        self.assertEqual(innertube.get_playback_tracking('abc', 'de', 'DE', 'access-vr'),
-                         TRACKING)
+        response = innertube.get_signed_in_player('abc', 'de', 'DE', 'access-vr')
+        self.assertEqual(response['playbackTracking'], TRACKING)
         self.assertEqual(self.clients_asked(), ['ANDROID_VR'])
         self.assertEqual(self.requests[0][1]['Authorization'], 'Bearer access-vr')
 
-    def test_a_refused_video_has_no_urls_reporting_playback(self):
+    def test_a_refused_video_has_no_signed_in_player(self):
         self.responses['ANDROID_VR'] = dict(BOT_CHECK, playbackTracking=TRACKING)
-        self.assertIsNone(innertube.get_playback_tracking('abc', 'de', 'DE', 'access-vr'))
+        self.assertIsNone(innertube.get_signed_in_player('abc', 'de', 'DE', 'access-vr'))
 
     def test_every_playback_gets_a_nonce_of_its_own(self):
         cpn = innertube.new_cpn()
@@ -281,3 +281,34 @@ class WatchProgressTest(BrowseTestCase):
             {'itemSectionRenderer': {'contents': [compact_video('v1'),
                                                   watched_video('v2', 10)]}})
         self.assertEqual(innertube.get_watch_progress('de', 'DE', 't'), {'v2': 10})
+
+
+def removable_video(video_id, token):
+    video = compact_video(video_id)
+    video['compactVideoRenderer']['menu'] = {'menuRenderer': {'items': [
+        {'menuServiceItemRenderer': {
+            'text': {'runs': [{'text': 'Aus Wiedergabeverlauf entfernen'}]},
+            'serviceEndpoint': {'feedbackEndpoint': {'feedbackToken': token}}}}]}}
+    return video
+
+
+class RemoveFromHistoryTest(BrowseTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.response = browse_response(
+            {'itemSectionRenderer': {'contents': [removable_video('v1', 'token-1a'),
+                                                  removable_video('v2', 'token-2')]}},
+            {'itemSectionRenderer': {'contents': [removable_video('v1', 'token-1b')]}})
+
+    def test_every_viewing_of_the_video_is_removed_as_the_signed_in_vr_app(self):
+        self.assertTrue(innertube.remove_from_history('v1', 'de', 'DE', 'access-vr'))
+        url, payload, headers = self.requests[1]
+        self.assertEqual(url, innertube.FEEDBACK_URL)
+        self.assertEqual(payload['feedbackTokens'], ['token-1a', 'token-1b'])
+        self.assertEqual(payload['context']['client']['clientName'], 'ANDROID_VR')
+        self.assertEqual(headers['Authorization'], 'Bearer access-vr')
+
+    def test_a_video_not_in_the_history_is_left_alone(self):
+        self.assertFalse(innertube.remove_from_history('v9', 'de', 'DE', 'access-vr'))
+        self.assertEqual(len(self.requests), 1)

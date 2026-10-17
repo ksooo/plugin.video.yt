@@ -118,7 +118,7 @@ def access_token(key):
 
 def sync_token():
     """Return the token to sync the watch history with, None if not to sync."""
-    if not addon.get_bool_setting(addon.SETTING_SYNC_ACCOUNT):
+    if not addon.get_bool_setting(addon.SETTING_SYNC_PLAYBACK):
         return None
     return access_token(VR)
 

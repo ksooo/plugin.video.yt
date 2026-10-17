@@ -174,7 +174,7 @@ list promised.
 
 ### Syncing with the watch history
 
-With the setting `sync_account` on and a sign-in, the add-on syncs both ways:
+With the setting `sync_playback` on and a sign-in, the add-on syncs both ways:
 
 * **Kodi to YouTube**: the plugin call that resolved a video stays alive
   while Kodi plays it (`watchtime.py`) and reports to the URLs of the player
@@ -183,7 +183,7 @@ With the setting `sync_account` on and a sign-in, the add-on syncs both ways:
   playback stops, with the time watched since the last report (`st`, `et`)
   and the player's `state`. The URLs belong to the account only in a
   signed-in player response, and only the Quest app is asked signed in; so
-  when `ANDROID` served the video, `innertube.get_playback_tracking()` asks
+  when `ANDROID` served the video, `innertube.get_signed_in_player()` asks
   the Quest app for them. Live streams are not reported.
 * **YouTube to Kodi**: `innertube.get_watch_progress()` takes the
   `percentDurationWatched` of the first page of `FEhistory`; every video
@@ -193,11 +193,27 @@ With the setting `sync_account` on and a sign-in, the add-on syncs both ways:
   YouTube's history takes a moment to show it.
 
 YouTube keeps the furthest position ever reported; reporting a smaller one,
-even 0, changes nothing. Only "Remove from watch history" (a
-`feedbackEndpoint` in the menu of a history entry) undoes a position. Kodi
-tells no add-on when its context menu marks a plugin item watched or
-unwatched or resets its resume point (`CVideoDatabase::SetPlayCount`
-announces library items only), so these do not reach YouTube.
+even 0, changes nothing - unless the video was removed from the history
+first: "Remove from watch history", a `feedbackEndpoint` in the menu of a
+history entry (`innertube.remove_from_history()`).
+
+The service (`service.py`) passes on what Kodi changes of the add-on's
+videos otherwise, e.g. from the context menu. Kodi announces that as
+`Files.OnPlayCountChanged` and `Files.OnResumePointChanged` from version 23
+on; older versions announce changes of library items only, and the service
+just waits.
+
+* A play count of 1 or more reports the video watched to the end.
+* A play count of 0 removes it from the history.
+* A resume point removes the video and reports it watched up to there, so
+  an earlier one gets through too.
+* A reset resume point removes the video, unless a play count follows
+  within 2 seconds: marking a video watched or unwatched, and playing it to
+  the end, reset its resume point first.
+
+Kodi lists a folder anew right after changing a video in it, before the
+history has the change, so the service refreshes a folder of the add-on
+once more after each change it made.
 
 ### The manifest
 

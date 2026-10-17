@@ -78,13 +78,13 @@ msgstr "Bei YouTube abmelden und den Zugriff des Addons auf das Konto widerrufen
 
 # settings label
 msgctxt "#30022"
-msgid "Sync with YouTube account"
-msgstr "Mit YouTube-Konto synchronisieren"
+msgid "Sync playback state with YouTube (Kodi 23+)"
+msgstr "Wiedergabestatus mit YouTube abgleichen (ab Kodi 23)"
 
 # settings help
 msgctxt "#30023"
-msgid "Videos played in Kodi go to the account's watch history, along with where they were stopped. Videos watched elsewhere resume where they were left there, and count as watched from 90 percent on. Needs signing in."
-msgstr "In Kodi wiedergegebene Videos landen samt Stopp-Position im Verlauf des Kontos. Anderswo gesehene Videos werden dort fortgesetzt, wo sie verlassen wurden, und gelten ab 90 Prozent als gesehen. Setzt eine Anmeldung voraus."
+msgid "Keep play counts and resume positions in step with the YouTube watch history; videos played in Kodi go to it. Needs signing in and Kodi 23. When off, Kodi alone keeps them."
+msgstr "Wiedergabezähler und Wiedergabepositionen mit dem YouTube-Verlauf abgleichen. In Kodi wiedergegebene Videos landen darin. Setzt eine Anmeldung und Kodi 23 voraus. Ausgeschaltet verwaltet sie allein Kodi."
 
 # settings label
 msgctxt "#30030"

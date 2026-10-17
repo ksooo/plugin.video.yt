@@ -373,6 +373,10 @@ class HistoryTest(BrowseTestCase):
 
 class SyncTest(BrowseTestCase):
 
+    def setUp(self):
+        super().setUp()
+        support.SETTINGS['sync_playback'] = True
+
     def found(self):
         """Search and return the info tag values of the video found."""
         return self.dispatch('search/results', '?q=rick')[0][1].info_tag.values
@@ -406,7 +410,7 @@ class SyncTest(BrowseTestCase):
         self.assertEqual(self.browsed, [('progress', 'access-vr')])
 
     def test_without_the_setting_kodi_keeps_its_own(self):
-        support.SETTINGS['sync_account'] = False
+        support.SETTINGS['sync_playback'] = False
         self.progress = {'dQw4w9WgXcQ': 50}
         self.assertNotIn('ResumePoint', self.found())
         self.assertEqual(self.browsed, [])

@@ -105,3 +105,15 @@ class WatchProgressTest(FeedsTestCase):
     def test_without_kept_progress_watching_notes_nothing(self):
         feeds.watched('v9', 70)
         self.assertEqual(feeds.watch_progress('access-vr'), {'v9': 40, 'v8': 100})
+
+    def test_a_video_removed_from_the_history_shows_at_once(self):
+        feeds.watch_progress('access-vr')
+        feeds.removed('v8')
+        self.assertEqual(feeds.watch_progress('access-vr'), {'v9': 40})
+        self.assertEqual(len(self.browsed), 1)
+
+    def test_watching_after_removing_starts_anew(self):
+        feeds.watch_progress('access-vr')
+        feeds.removed('v8')
+        feeds.watched('v8', 10)
+        self.assertEqual(feeds.watch_progress('access-vr')['v8'], 10)

@@ -98,11 +98,12 @@ def _sync(player, video_id, url):
         tracking = player.response.get('playbackTracking')
     else:
         try:
-            tracking = innertube.get_playback_tracking(video_id, addon.language(),
-                                                       addon.region(), token)
+            response = innertube.get_signed_in_player(video_id, addon.language(),
+                                                      addon.region(), token)
         except http.RequestError as error:
             addon.log_error(str(error))
             return
+        tracking = response.get('playbackTracking') if response else None
     if not tracking:
         addon.log('{} cannot be reported to the watch history'.format(video_id))
         return

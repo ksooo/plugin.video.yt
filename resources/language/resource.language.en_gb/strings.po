@@ -78,12 +78,12 @@ msgstr ""
 
 # settings label
 msgctxt "#30022"
-msgid "Sync with YouTube account"
+msgid "Sync playback state with YouTube (Kodi 23+)"
 msgstr ""
 
 # settings help
 msgctxt "#30023"
-msgid "Videos played in Kodi go to the account's watch history, along with where they were stopped. Videos watched elsewhere resume where they were left there, and count as watched from 90 percent on. Needs signing in."
+msgid "Keep play counts and resume positions in step with the YouTube watch history; videos played in Kodi go to it. Needs signing in and Kodi 23. When off, Kodi alone keeps them."
 msgstr ""
 
 # settings label

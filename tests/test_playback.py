@@ -208,13 +208,14 @@ class SyncTest(PlaybackTestCase):
     def setUp(self):
         super().setUp()
         support.store_tokens(user=tokens('user'), vr=tokens('vr'))
+        support.SETTINGS['sync_playback'] = True
         self.response['playbackTracking'] = TRACKING
         self.reports = []
         self.report_failure = None
         self.tracking_requests = []
         for patcher in (mock.patch.object(watchtime.http, 'request_json', self._request_json),
-                        mock.patch.object(innertube, 'get_playback_tracking',
-                                          self._get_playback_tracking)):
+                        mock.patch.object(innertube, 'get_signed_in_player',
+                                          self._get_signed_in_player)):
             patcher.start()
             self.addCleanup(patcher.stop)
 
@@ -224,9 +225,9 @@ class SyncTest(PlaybackTestCase):
             raise self.report_failure
         return {}
 
-    def _get_playback_tracking(self, video_id, language, region, access_token):
+    def _get_signed_in_player(self, video_id, language, region, access_token):
         self.tracking_requests.append((video_id, access_token))
-        return TRACKING
+        return dict(player_response(video_id), playbackTracking=TRACKING)
 
     @staticmethod
     def watch(seconds, start=0, paused=()):
@@ -286,7 +287,7 @@ class SyncTest(PlaybackTestCase):
         self.assertEqual(len(self.reports), 2)
 
     def test_without_the_setting_nothing_is_reported(self):
-        support.SETTINGS['sync_account'] = False
+        support.SETTINGS['sync_playback'] = False
         self.watch(25)
         self.play()
         self.assertEqual(self.reports, [])

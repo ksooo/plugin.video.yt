@@ -28,7 +28,7 @@ SETTING_CLIENT_ID = 'client_id'
 SETTING_CLIENT_SECRET = 'client_secret'
 SETTING_SIGNED_IN = 'signed_in'
 SETTING_VIDEO_CODECS = 'video_codecs'
-SETTING_SYNC_ACCOUNT = 'sync_account'
+SETTING_SYNC_PLAYBACK = 'sync_playback'
 
 
 def localize(string_id):

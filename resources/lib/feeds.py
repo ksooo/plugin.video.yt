@@ -82,3 +82,11 @@ def watched(video_id, percent):
         progress = cache['progress']
         progress[video_id] = max(percent, progress.get(video_id, 0))
         addon.save_json(path, cache)
+
+
+def removed(video_id):
+    """Note that the video was just removed from the watch history."""
+    path = addon.temp_path(PROGRESS_FILE)
+    cache = addon.load_json(path, None)
+    if cache is not None and cache['progress'].pop(video_id, None) is not None:
+        addon.save_json(path, cache)

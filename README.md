@@ -43,8 +43,9 @@ Kodi remembers where you stopped and which videos you watched, as for any other 
 
 ## Syncing with YouTube
 
-When signed in, the setting **Playback ▸ Sync with YouTube account**, on by default, keeps Kodi
-and the account's watch history in step:
+When signed in, the setting **Playback ▸ Sync playback state with YouTube**, off by default, keeps
+Kodi and the account's watch history in step. When it is off, Kodi alone keeps play counts and
+resume positions.
 
 * Videos played in Kodi go to the history, along with where they were stopped. Live streams do
   not.
@@ -52,11 +53,16 @@ and the account's watch history in step:
   watched from 90 percent on. That holds for the videos watched last - the first page of the
   history; for older ones, what Kodi remembers holds.
 
-YouTube only ever moves a position forward. Starting a video over and stopping it earlier leaves
-the history, and so the resume point, where it was; a video watched to the end stays watched
-until it is deleted from the history on YouTube. Kodi's context menu entries to mark a video
-watched or unwatched or to reset its resume point do not reach YouTube: for a video in the
-history, the history wins again the next time the folder is listed.
+From Kodi 23 on, Kodi tells the add-on when a video's play count or resume point changes, and the
+add-on passes that on: marking a video watched reports it watched to the end, marking it
+unwatched or resetting its resume point removes it from the history, and a resume point Kodi
+keeps replaces the one YouTube has, even an earlier one.
+
+Older Kodi versions do not tell, and YouTube only ever moves a position forward. Starting a video
+over and stopping it earlier leaves the history, and so the resume point, where it was; a video
+watched to the end stays watched until it is deleted from the history on YouTube. Kodi's context
+menu entries to mark a video watched or unwatched or to reset its resume point do not reach
+YouTube: for a video in the history, the history wins again the next time the folder is listed.
 
 ## Requirements
 
