@@ -20,6 +20,8 @@ from tests.support import AddonTestCase
 from tests.support import VP9_1080
 from tests.support import VP9_HDR_1080
 from tests.support import OPUS
+from tests.support import AUTO_DUB_DE
+from tests.support import ORIGINAL_EN
 from tests.support import player_response
 from tests.support import tokens
 
@@ -130,6 +132,21 @@ class VideoTest(PlaybackTestCase):
             ".//{urn:mpeg:dash:schema:mpd:2011}AdaptationSet[@contentType='video']/"
             "{urn:mpeg:dash:schema:mpd:2011}Representation")]
         self.assertEqual(codecs, ['avc1.640028'])
+
+    def audio_names(self):
+        return [adaptation_set.get('name') for adaptation_set in self.manifest().iterfind(
+            ".//{urn:mpeg:dash:schema:mpd:2011}AdaptationSet[@contentType='audio']")]
+
+    def test_automatic_dubs_are_named_in_kodis_language(self):
+        self.response = player_response('abc', formats=(VP9_1080, AUTO_DUB_DE, ORIGINAL_EN))
+        self.play()
+        self.assertEqual(self.audio_names(), ['Opus', 'L30037'])
+
+    def test_the_setting_leaves_automatic_dubs_out(self):
+        support.SETTINGS['skip_auto_dubs'] = True
+        self.response = player_response('abc', formats=(VP9_1080, AUTO_DUB_DE, ORIGINAL_EN))
+        self.play()
+        self.assertEqual(self.audio_names(), ['Opus'])
 
     def test_the_caption_tracks_become_subtitles(self):
         self.response['captions'] = {'playerCaptionsTracklistRenderer': {'captionTracks': [

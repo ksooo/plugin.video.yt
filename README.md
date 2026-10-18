@@ -43,7 +43,8 @@ display allow. Kodi's own dialogues switch between:
   setting **Playback ▸ Video codecs** chooses the codecs offered - VP9 and H.264 by default; AV1
   only plays smoothly where the device decodes it in hardware.
 * **Audio**: one entry per audio track - the original and any dubbed one -, plus one for surround
-  sound where a video has it.
+  sound where a video has it. Tracks YouTube dubbed automatically are named so; the setting
+  **Playback ▸ Leave out automatic dubs** drops them.
 * **Subtitles**: the subtitles made for the video, and those YouTube recognized from the speech.
 
 Kodi remembers where you stopped and which videos you watched, as for any other video.

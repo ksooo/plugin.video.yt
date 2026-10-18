@@ -69,12 +69,13 @@ _ROLE_DESCRIPTION = '2'
 _MIME_TYPE = re.compile(r'^(?P<mime>[\w-]+/[\w.+-]+);\s*codecs="(?P<codecs>[^"]+)"$')
 
 
-def build(formats, captions, video_codecs, prefer_hdr):
+def build(formats, captions, video_codecs, prefer_hdr, auto_dub_name):
     """Return the MPD for the adaptive formats, or None without video or audio.
 
     captions are the captionTracks of the player response. video_codecs is the
     collection of video codec families allowed, prefer_hdr makes an HDR
-    AdaptationSet the default one when there is one.
+    AdaptationSet the default one when there is one. auto_dub_name names the
+    audio tracks YouTube dubbed automatically; None leaves them out.
     """
     video_sets = {}
     audio_sets = {}
@@ -88,6 +89,8 @@ def build(formats, captions, video_codecs, prefer_hdr):
             transfer = _HDR_TRANSFERS.get(data.get('colorInfo', {}).get('transferCharacteristics'))
             video_sets.setdefault((mime, family, transfer), []).append(data)
         elif mime.startswith('audio/') and family in AUDIO_CODEC_ORDER and not data.get('isDrc'):
+            if auto_dub_name is None and _is_auto_dub(data):
+                continue
             track_id = data.get('audioTrack', {}).get('id', '')
             surround = int(data.get('audioChannels', 2)) > 2
             audio_sets.setdefault((mime, family, track_id, surround), []).append(data)
@@ -118,7 +121,8 @@ def build(formats, captions, video_codecs, prefer_hdr):
         _add_video_set(period, index, key, video_sets[key], index == 0)
 
     for index, key in enumerate(sorted(audio_sets, key=audio_rank), start=len(video_sets)):
-        _add_audio_set(period, index, key, audio_sets[key], index == len(video_sets))
+        _add_audio_set(period, index, key, audio_sets[key], index == len(video_sets),
+                       auto_dub_name)
 
     for index, track in enumerate(captions, start=len(video_sets) + len(audio_sets)):
         _add_subtitle_set(period, index, track)
@@ -169,6 +173,11 @@ def _is_original(data):
     return content == 'original' if content else bool(track.get('audioIsDefault'))
 
 
+def _is_auto_dub(data):
+    """Whether the audio format belongs to a track YouTube dubbed automatically."""
+    return _xtags(data).get('acont') == 'dubbed-auto'
+
+
 def _xtags(data):
     """Return the tags of a format's URL, e.g. {'acont': 'original', 'lang': 'en-US'}."""
     xtags = dict(parse_qsl(urlsplit(data.get('url', '')).query)).get('xtags', '')
@@ -197,10 +206,10 @@ def _add_video_set(period, index, key, formats, is_default):
         _add_segment_base(representation, data)
 
 
-def _add_audio_set(period, index, key, formats, is_default):
+def _add_audio_set(period, index, key, formats, is_default, auto_dub_name):
     mime, family, track_id, _ = key
-    adaptation_set = _add_adaptation_set(period, index, 'audio', mime, _CODEC_NAMES[family],
-                                         is_default)
+    name = auto_dub_name if _is_auto_dub(formats[0]) else _CODEC_NAMES[family]
+    adaptation_set = _add_adaptation_set(period, index, 'audio', mime, name, is_default)
     if track_id:
         language, _, role = track_id.partition('.')
         adaptation_set.set('lang', language)

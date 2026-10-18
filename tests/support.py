@@ -40,6 +40,7 @@ DEFAULT_SETTINGS = {
     'client_secret': '',
     'signed_in': False,
     'video_codecs': ['vp9', 'avc1'],
+    'skip_auto_dubs': False,
     'sync_playback': False,
 }
 SETTINGS = dict(DEFAULT_SETTINGS)
@@ -357,6 +358,19 @@ VP9_HDR_1080 = video_format(
                'matrixCoefficients': 'COLOR_MATRIX_COEFFICIENTS_BT2020_NCL'})
 OPUS = audio_format(251, 'audio/webm; codecs="opus"', 140000)
 AAC = audio_format(140, 'audio/mp4; codecs="mp4a.40.2"', 130000)
+
+
+def tagged_audio_format(itag, track_id, content, is_default=False):
+    """An Opus format of one of several audio tracks, tagged as YouTube does, e.g. 'original'."""
+    data = audio_format(itag, 'audio/webm; codecs="opus"', 140000,
+                        audioTrack={'id': track_id, 'audioIsDefault': is_default})
+    data['url'] += '&xtags=acont%3D{}%3Alang%3D{}'.format(content, track_id.partition('.')[0])
+    return data
+
+
+ORIGINAL_EN = tagged_audio_format(251, 'en-US.4', 'original')
+#: The track YouTube picks for German, dubbed automatically.
+AUTO_DUB_DE = tagged_audio_format(1251, 'de-DE.10', 'dubbed-auto', is_default=True)
 
 
 def player_response(video_id, formats=(VP9_1080, AVC_1080, OPUS, AAC), **details):

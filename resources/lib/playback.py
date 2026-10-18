@@ -75,7 +75,9 @@ def _play_video(handle, video_id, formats, captions, headers):
     """Hand the video to Kodi. Returns the URL Kodi plays it from, None if that failed."""
     mpd = manifest.build(formats, captions,
                          addon.get_string_list_setting(addon.SETTING_VIDEO_CODECS),
-                         prefer_hdr=bool(xbmc.getInfoLabel('System.SupportedHDRTypes')))
+                         prefer_hdr=bool(xbmc.getInfoLabel('System.SupportedHDRTypes')),
+                         auto_dub_name=(None if addon.get_bool_setting(addon.SETTING_SKIP_AUTO_DUBS)
+                                        else addon.localize(30037)))
     if mpd is None:
         addon.log('{} has no usable formats'.format(video_id))
         _fail(handle, addon.localize(30100))

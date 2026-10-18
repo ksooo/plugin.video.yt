@@ -285,7 +285,8 @@ Each audio track gets AdaptationSets of its own. The original one is the
 track whose URL carries `xtags=acont=original:...`. `audioIsDefault` marks
 the track YouTube picks for the language asked for, which for a video
 dubbed automatically (`acont=dubbed-auto`) is the dub; it only counts where
-a track has no such tag.
+a track has no such tag. Automatic dubs get a name of their own, or are left
+out with the setting `skip_auto_dubs`.
 
 Kodi-version notes:
 

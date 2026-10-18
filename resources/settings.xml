@@ -92,6 +92,11 @@
             <multiselect>true</multiselect>
           </control>
         </setting>
+        <setting id="skip_auto_dubs" type="boolean" label="30035" help="30036">
+          <level>0</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
         <setting id="sync_playback" type="boolean" label="30022" help="30023">
           <level>0</level>
           <default>false</default>

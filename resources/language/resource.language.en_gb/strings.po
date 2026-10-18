@@ -111,6 +111,21 @@ msgctxt "#30034"
 msgid "H.264"
 msgstr ""
 
+# settings label
+msgctxt "#30035"
+msgid "Leave out automatic dubs"
+msgstr ""
+
+# settings help
+msgctxt "#30036"
+msgid "Audio tracks YouTube dubbed automatically are not offered. Dubs made by people stay."
+msgstr ""
+
+# name of an audio track in Kodi's audio stream dialogue
+msgctxt "#30037"
+msgid "Automatic dub"
+msgstr ""
+
 # notification, YouTube gave no reason
 msgctxt "#30100"
 msgid "This video cannot be played."

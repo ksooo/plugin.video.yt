@@ -13,9 +13,11 @@ import xml.etree.ElementTree as ElementTree
 
 # Importing support installs the xbmc* stubs, so it has to come first.
 from tests.support import AAC
+from tests.support import AUTO_DUB_DE
 from tests.support import AV1_1080
 from tests.support import AVC_1080
 from tests.support import OPUS
+from tests.support import ORIGINAL_EN
 from tests.support import VP9_1080
 from tests.support import VP9_720
 from tests.support import VP9_HDR_1080
@@ -27,8 +29,9 @@ NS = {'dash': 'urn:mpeg:dash:schema:mpd:2011'}
 ALL_VIDEO_CODECS = ('av1', 'vp9', 'avc1')
 
 
-def build(formats, video_codecs=('vp9', 'avc1'), prefer_hdr=False, captions=()):
-    mpd = manifest.build(formats, list(captions), video_codecs, prefer_hdr)
+def build(formats, video_codecs=('vp9', 'avc1'), prefer_hdr=False, captions=(),
+          auto_dub_name='Automatic dub'):
+    mpd = manifest.build(formats, list(captions), video_codecs, prefer_hdr, auto_dub_name)
     return None if mpd is None else ElementTree.fromstring(mpd)
 
 
@@ -243,15 +246,17 @@ class AudioTest(unittest.TestCase):
                           ('en', None, None, 'true')])
 
     def test_the_original_is_the_track_tagged_so_not_the_dub_youtube_defaults_to(self):
-        dubbed = audio_format(1251, 'audio/webm; codecs="opus"', 140000,
-                              audioTrack={'id': 'de-DE.10', 'audioIsDefault': True,
-                                          'isAutoDubbed': True})
-        dubbed['url'] += '&xtags=acont%3Ddubbed-auto%3Alang%3Dde-DE'
-        original = audio_format(251, 'audio/webm; codecs="opus"', 140000,
-                                audioTrack={'id': 'en-US.4', 'audioIsDefault': False})
-        original['url'] += '&xtags=acont%3Doriginal%3Alang%3Den-US'
-        audio = adaptation_sets(build([VP9_1080, dubbed, original]), 'audio')
-
+        audio = adaptation_sets(build([VP9_1080, AUTO_DUB_DE, ORIGINAL_EN]), 'audio')
         self.assertEqual([(adaptation_set.get('lang'), adaptation_set.get('original'))
                           for adaptation_set in audio],
                          [('en-US', 'true'), ('de-DE', None)])
+
+    def test_automatic_dubs_are_named_as_such(self):
+        audio = adaptation_sets(build([VP9_1080, AUTO_DUB_DE, ORIGINAL_EN]), 'audio')
+        self.assertEqual([adaptation_set.get('name') for adaptation_set in audio],
+                         ['Opus', 'Automatic dub'])
+
+    def test_automatic_dubs_can_be_left_out(self):
+        audio = adaptation_sets(build([VP9_1080, AUTO_DUB_DE, ORIGINAL_EN], auto_dub_name=None),
+                                'audio')
+        self.assertEqual([adaptation_set.get('lang') for adaptation_set in audio], ['en-US'])
