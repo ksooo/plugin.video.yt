@@ -57,7 +57,7 @@ class BrowseTestCase(AddonTestCase):
                         'video_categories': [dataapi.Category('10', 'Musik'),
                                              dataapi.Category('20', 'Gaming')],
                         'subscribe': 'sub-new', 'unsubscribe': None,
-                        'ratings': {}, 'rate': None}
+                        'ratings': {}, 'rate': None, 'liked_videos': [VIDEO]}
         self.failure = None
         for name in self.results:
             patcher = mock.patch.object(dataapi, name, self._query(name))
@@ -128,13 +128,14 @@ class RootTest(BrowseTestCase):
     def test_everything_is_offered_when_signed_in(self):
         items = self.dispatch()
         self.assertEqual(self.labels(items),
-                         ['L30200', 'L30400', 'L30300', 'L30600', 'L30301', 'L30401'])
+                         ['L30200', 'L30400', 'L30300', 'L30600', 'L30301', 'L30401', 'L30704'])
         self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/subscriptions/',
                                             'plugin://plugin.video.yt/recommended/',
                                             'plugin://plugin.video.yt/trending/',
                                             'plugin://plugin.video.yt/live/',
                                             'plugin://plugin.video.yt/search/',
-                                            'plugin://plugin.video.yt/history/'])
+                                            'plugin://plugin.video.yt/history/',
+                                            'plugin://plugin.video.yt/likes/'])
 
     def test_an_api_key_is_enough_for_trending_live_and_search(self):
         self.sign_out(api_key='key-1')
@@ -461,6 +462,22 @@ class HistoryTest(BrowseTestCase):
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30105')])
         self.assertFalse(support.PLUGIN_STATE['succeeded'])
         self.assertEqual(self.browsed, [])
+
+
+class LikesTest(BrowseTestCase):
+
+    def test_the_liked_videos_are_listed(self):
+        items = self.dispatch('likes')
+        self.assertEqual(self.queried('liked_videos'), [(100,)])
+        self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/play/?v=dQw4w9WgXcQ'])
+        self.assertEqual(support.PLUGIN_STATE['category'], 'L30704')
+
+    def test_without_sign_in_the_user_is_told(self):
+        self.sign_out(api_key='key-1')
+        self.dispatch('likes')
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30105')])
+        self.assertFalse(support.PLUGIN_STATE['succeeded'])
+        self.assertEqual(self.queries, [])
 
 
 class SyncTest(BrowseTestCase):

@@ -143,6 +143,16 @@ class SubscribeTest(DataApiTestCase):
             dataapi.subscribe('UC1', auth=USER)
 
 
+class LikedVideosTest(DataApiTestCase):
+
+    def test_the_videos_rated_like_are_asked_for(self):
+        self.responses['videos'] = [{'items': [video('v1'), video('v2')]}]
+        videos = dataapi.liked_videos(100, auth=USER)
+        self.assertEqual([video.video_id for video in videos], ['v1', 'v2'])
+        self.assertEqual(self.requested('videos'), [{
+            'part': 'snippet,contentDetails,statistics', 'myRating': 'like', 'maxResults': '50'}])
+
+
 class RatingTest(DataApiTestCase):
 
     def test_the_ratings_are_asked_for_fifty_videos_at_a_time(self):

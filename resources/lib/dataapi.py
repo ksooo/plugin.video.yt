@@ -162,6 +162,14 @@ def videos(video_ids, auth):
     return [details[video_id] for video_id in video_ids if video_id in details]
 
 
+def liked_videos(count, auth):
+    """Return the videos the account liked, in YouTube's order. 1 unit per 50."""
+    return [_video(item) for item in _all_items('videos', {
+        'part': _VIDEO_PARTS,
+        'myRating': 'like',
+    }, auth, limit=count)]
+
+
 def ratings(video_ids, auth):
     """Return the account's ratings of the videos by id. 1 unit per 50 videos.
 

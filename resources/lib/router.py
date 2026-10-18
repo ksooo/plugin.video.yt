@@ -31,8 +31,8 @@ from . import search
 from . import subscriptions
 from . import trends
 
-#: The most videos listed for a channel, a category of trending videos or the
-#: newest videos of the subscriptions.
+#: The most videos listed for a channel, a category of trending videos, the
+#: newest videos of the subscriptions or the liked videos.
 VIDEO_COUNT = 100
 
 #: The most videos listed for a search; a page of 50 costs 101 quota units.
@@ -78,6 +78,7 @@ class Router:
             items.append(listing.folder_item(addon.localize(30301), 'search'))
         if signed_in:
             items.append(listing.folder_item(addon.localize(30401), 'history'))
+            items.append(listing.folder_item(addon.localize(30704), 'likes'))
         listing.finish_folders(self._handle, items, addon.ADDON_NAME)
 
     def _list_subscriptions(self):
@@ -168,6 +169,11 @@ class Router:
             return
         self._list_videos(lambda auth: dataapi.videos(feeds.history(access_token), auth=auth),
                           addon.localize(30401), need_account=True)
+
+    def _list_likes(self):
+        """Show the videos the account liked."""
+        self._list_videos(lambda auth: dataapi.liked_videos(VIDEO_COUNT, auth=auth),
+                          addon.localize(30704), need_account=True)
 
     def _feed_token(self):
         """Return the token InnerTube takes for the account's feeds, None if not signed in."""
@@ -404,6 +410,7 @@ _ROUTES = {
     'recommended': Router._list_recommendations,
     'recommended/shelf': Router._list_recommendation_shelf,
     'history': Router._list_history,
+    'likes': Router._list_likes,
     'trending': Router._list_trending,
     'trending/category': Router._list_trending_category,
     'live': Router._list_live,

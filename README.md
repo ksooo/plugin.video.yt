@@ -1,7 +1,7 @@
 # YouTube
 
-A Kodi video add-on for YouTube: subscriptions, recommendations, trending, search and watch history
-as folders in Kodi's video window.
+A Kodi video add-on for YouTube: subscriptions, recommendations, trending, search, watch history
+and likes as folders in Kodi's video window.
 
 ![icon](resources/icon.png)
 
@@ -23,6 +23,7 @@ The top level offers:
   by relevance, in the region and language set in Kodi.
 * **History**, when signed in: the videos watched last on YouTube, the latest first - and in Kodi,
   see [Syncing with YouTube](#syncing-with-youtube).
+* **Likes**, when signed in: the videos liked on YouTube, at most 100.
 
 Trending, live and search work with just the API key, without signing in.
 

@@ -35,16 +35,18 @@ no quota, the 15 newest videos of each. Only the details of the newest 100
 go through the Data API. The folder is kept on top of the channels with the
 `SpecialSort` property.
 
+The likes come from `videos.list` with `myRating=like`, details included.
+
 Every video listing comes in an order of its own, which "Default", the first
 sort method, keeps: a channel newest first, the history last watched first,
-search, trending and recommendations in YouTube's order. Kodi's "Date" would
-not do for the channels: it starts descending for Kodi's own listings, but
-for a plugin's always ascending - `CFileItemList::AddSortMethod` hands over
-an ascending order, where `CGUIViewState::AddSortMethod` would pick
-descending for an unset one.
+search, trending, recommendations and likes in YouTube's order. Kodi's
+"Date" would not do for the channels: it starts descending for Kodi's own
+listings, but for a plugin's always ascending -
+`CFileItemList::AddSortMethod` hands over an ascending order, where
+`CGUIViewState::AddSortMethod` would pick descending for an unset one.
 
-There is no "next page" entry: a channel and a trending category show 100
-videos, a search 50, and that's it.
+There is no "next page" entry: a channel, a trending category and the likes
+show 100 videos, a search 50, and that's it.
 
 Video titles lose the emojis they start with: Kodi renders a label starting
 with one blank. Emojis further on stay, as boxes - skin fonts have no glyphs
@@ -119,10 +121,11 @@ cached; a listing is refreshed after a change, as for the subscriptions.
 
 `dataapi.py` wraps the calls; each notes its quota cost. A project gets
 10,000 units a day. Opening the subscriptions costs 1 unit per 50 channels,
-opening a channel 4 units, a category of trending videos 2, a search 101,
-subscribing or unsubscribing 50, liking or taking a like back 50. Signed in,
-a listing of videos costs 1 unit more per 50 videos for their ratings.
-Finding the trending categories costs one unit per category once a day.
+opening a channel 4 units, a category of trending videos 2, the likes 2, a
+search 101, subscribing or unsubscribing 50, liking or taking a like back
+50. Signed in, a listing of videos costs 1 unit more per 50 videos for their
+ratings. Finding the trending categories costs one unit per category once a
+day.
 
 A video costs the same whichever parts of it are asked for, so the listings
 take its `statistics` too: the numbers of views and likes head its plot,

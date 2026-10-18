@@ -350,3 +350,8 @@ msgstr "Like hinzugefügt"
 msgctxt "#30703"
 msgid "Like removed"
 msgstr "Like entfernt"
+
+# main menu
+msgctxt "#30704"
+msgid "Likes"
+msgstr "Likes"
