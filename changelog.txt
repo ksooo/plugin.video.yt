@@ -1,2 +1,13 @@
+v1.1.0
+- New folder "Live" with the live streams YouTube features now, the upcoming ones and those just ended
+- New folder "All subscriptions" with the newest videos of all subscribed channels together
+- New folder "Likes" with the videos you liked
+- Like a video or remove your like from its context menu
+- A video's plot now starts with its channel and its numbers of views and likes
+- Playing a live stream that has not started yet tells when it starts
+- With Kodi 23, marking a video watched or unwatched and resetting its resume point also reach your YouTube watch history
+- Syncing the playback state with YouTube is now off by default; it can be switched on in the playback settings
+- After signing in with another account, the previous account's recommendations no longer show up
+
 v1.0.0
 - Initial release
