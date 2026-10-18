@@ -74,6 +74,23 @@ class HistoryTest(FeedsTestCase):
         self.assertEqual(feeds.history('access-vr'), ['v9', 'v8'])
         self.assertEqual(self.browsed, [('FEhistory', 'de', '', 'access-vr')])
 
+    def test_a_video_just_removed_is_left_out_while_youtube_still_has_it(self):
+        feeds.removed('v8')
+        self.assertEqual(feeds.history('access-vr'), ['v9'])
+
+    def test_after_five_minutes_youtube_has_the_say_again(self):
+        with mock.patch.object(feeds.time, 'time', return_value=1000000):
+            feeds.removed('v8')
+        with mock.patch.object(feeds.time, 'time', return_value=1000000 + 5 * 60 - 1):
+            self.assertEqual(feeds.history('access-vr'), ['v9'])
+        with mock.patch.object(feeds.time, 'time', return_value=1000000 + 5 * 60):
+            self.assertEqual(feeds.history('access-vr'), ['v9', 'v8'])
+
+    def test_a_video_watched_again_after_removing_is_back(self):
+        feeds.removed('v8')
+        feeds.watched('v8', 10)
+        self.assertEqual(feeds.history('access-vr'), ['v9', 'v8'])
+
 
 class WatchProgressTest(FeedsTestCase):
 
@@ -111,6 +128,10 @@ class WatchProgressTest(FeedsTestCase):
         feeds.removed('v8')
         self.assertEqual(feeds.watch_progress('access-vr'), {'v9': 40})
         self.assertEqual(len(self.browsed), 1)
+
+    def test_a_video_just_removed_has_no_progress_even_when_fetched_anew(self):
+        feeds.removed('v8')
+        self.assertEqual(feeds.watch_progress('access-vr'), {'v9': 40})
 
     def test_watching_after_removing_starts_anew(self):
         feeds.watch_progress('access-vr')

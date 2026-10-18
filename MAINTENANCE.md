@@ -231,7 +231,9 @@ With the setting `sync_playback` on and a sign-in, the add-on syncs both ways:
 YouTube keeps the furthest position ever reported; reporting a smaller one,
 even 0, changes nothing - unless the video was removed from the history
 first: "Remove from watch history", a `feedbackEndpoint` in the menu of a
-history entry (`innertube.remove_from_history()`).
+history entry (`innertube.remove_from_history()`). YouTube still delivers a
+removed video for a while, so `feeds.py` leaves it out of the history and
+the progress for 5 minutes, unless it is watched again.
 
 The service (`service.py`) passes on what Kodi changes of the add-on's
 videos otherwise, e.g. from the context menu. Kodi announces that as

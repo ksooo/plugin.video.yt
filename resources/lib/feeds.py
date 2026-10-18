@@ -18,6 +18,10 @@ what the list of shelves promised. A shelf is found by its title.
 
 How far the account watched the videos of its history is kept for
 PROGRESS_MAX_AGE_SECONDS as well, since every video listing needs it.
+
+YouTube still delivers a video just removed from the history for a while, so
+such a video is left out of the history and its progress for
+REMOVED_MAX_AGE_SECONDS, unless it is watched again.
 """
 
 import time
@@ -30,6 +34,9 @@ SHELVES_MAX_AGE_SECONDS = 15 * 60
 
 PROGRESS_FILE = 'watch-progress.json'
 PROGRESS_MAX_AGE_SECONDS = 5 * 60
+
+REMOVED_FILE = 'removed-from-history.json'
+REMOVED_MAX_AGE_SECONDS = 5 * 60
 
 
 def recommendation_shelves(access_token):
@@ -52,10 +59,12 @@ def recommendation_shelf(title, access_token):
 
 def history(access_token):
     """Return the ids of the videos watched last, the latest first."""
+    removed = _recently_removed()
     video_ids = []
     for shelf in innertube.get_shelves(innertube.HISTORY, addon.language(), addon.region(),
                                        access_token):
-        video_ids.extend(video_id for video_id in shelf.video_ids if video_id not in video_ids)
+        video_ids.extend(video_id for video_id in shelf.video_ids
+                         if video_id not in video_ids and video_id not in removed)
     return video_ids
 
 
@@ -67,6 +76,8 @@ def watch_progress(access_token):
         return cache['progress']
 
     progress = innertube.get_watch_progress(addon.language(), addon.region(), access_token)
+    for video_id in _recently_removed():
+        progress.pop(video_id, None)
     addon.save_json(path, {'saved_at': time.time(), 'progress': progress})
     return progress
 
@@ -76,6 +87,10 @@ def watched(video_id, percent):
 
     YouTube keeps the furthest position reported, and so does this.
     """
+    removals = _recently_removed()
+    if removals.pop(video_id, None) is not None:
+        addon.save_json(addon.temp_path(REMOVED_FILE), removals)
+
     path = addon.temp_path(PROGRESS_FILE)
     cache = addon.load_json(path, None)
     if cache is not None:
@@ -86,7 +101,19 @@ def watched(video_id, percent):
 
 def removed(video_id):
     """Note that the video was just removed from the watch history."""
+    removals = _recently_removed()
+    removals[video_id] = time.time()
+    addon.save_json(addon.temp_path(REMOVED_FILE), removals)
+
     path = addon.temp_path(PROGRESS_FILE)
     cache = addon.load_json(path, None)
     if cache is not None and cache['progress'].pop(video_id, None) is not None:
         addon.save_json(path, cache)
+
+
+def _recently_removed():
+    """Return when the videos were removed from the history lately, by id."""
+    now = time.time()
+    return {video_id: removed_at
+            for video_id, removed_at in addon.load_json(addon.temp_path(REMOVED_FILE), {}).items()
+            if now - removed_at < REMOVED_MAX_AGE_SECONDS}

@@ -164,7 +164,8 @@ def _save(tokens):
 def _forget():
     # The feeds kept in Kodi's temp directory belong to the account too.
     paths = [addon.profile_path(TOKENS_FILE), addon.profile_path(SUBSCRIPTIONS_FILE),
-             addon.temp_path(feeds.SHELVES_FILE), addon.temp_path(feeds.PROGRESS_FILE)]
+             addon.temp_path(feeds.SHELVES_FILE), addon.temp_path(feeds.PROGRESS_FILE),
+             addon.temp_path(feeds.REMOVED_FILE)]
     for path in paths:
         try:
             os.remove(path)

@@ -138,7 +138,7 @@ class SignOutTest(AccountTestCase):
     def test_the_kept_feeds_of_the_account_go_too(self):
         support.store_tokens(user=tokens('user'), vr=tokens('vr'))
         caches = [os.path.join(support.PROFILE_DIR, file_name)
-                  for file_name in (feeds.SHELVES_FILE, feeds.PROGRESS_FILE)]
+                  for file_name in (feeds.SHELVES_FILE, feeds.PROGRESS_FILE, feeds.REMOVED_FILE)]
         for cache in caches:
             with open(cache, 'w', encoding='utf-8') as cache_file:
                 cache_file.write('{}')
