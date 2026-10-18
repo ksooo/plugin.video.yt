@@ -27,6 +27,13 @@ CONTENT_VIDEOS = 'videos'
 #: From how many percent on a video counts as watched.
 WATCHED_PERCENT = 90
 
+#: The counts heading a video's plot: field of dataapi.Video, label ids for
+#: many and for one, colour as in other YouTube add-ons.
+_COUNTS = (('views', 30500, 30501, 'lightblue'),
+           ('likes', 30502, 30503, 'lime'))
+
+_NUMBER_SCALES = ('', 'K', 'M', 'B')
+
 #: Emojis and blanks at the start of a title. Kodi renders a label starting
 #: with an emoji blank, while other emojis merely show as boxes. Covered are
 #: the emoji blocks, the symbols and dingbats YouTube titles use as emojis,
@@ -138,7 +145,7 @@ def video_item(video, subscribed, link_channel, percent_watched=None):
     info_tag = list_item.getVideoInfoTag()
     info_tag.setMediaType('video')
     info_tag.setTitle(title)
-    info_tag.setPlot(video.description)
+    info_tag.setPlot(_plot(video))
     info_tag.setStudios([video.channel_title])
     info_tag.setPremiered(video.published[:10])
     info_tag.setDuration(video.duration)
@@ -152,6 +159,31 @@ def video_item(video, subscribed, link_channel, percent_watched=None):
                                 video.duration)
 
     return url('play', v=video.video_id), list_item, False
+
+
+def _plot(video):
+    """Return the video's description, headed by its channel and its counts."""
+    head = ['[B]{}[/B]'.format(video.channel_title)]
+    counts = []
+    for field, many_id, one_id, colour in _COUNTS:
+        count = getattr(video, field)
+        if count:
+            label = addon.localize(one_id if count == 1 else many_id).format(_short_number(count))
+            counts.append('[COLOR {}][B]{}[/B][/COLOR]'.format(colour, label))
+    if counts:
+        head.append('  •  '.join(counts))
+    head = '[CR]'.join(head)
+    return '{}[CR][CR]{}'.format(head, video.description) if video.description else head
+
+
+def _short_number(number):
+    """Return a number rounded to three digits the way YouTube shows it, e.g. 6.34K."""
+    value = float('{:.3g}'.format(number))
+    scale = 0
+    while value >= 1000 and scale < len(_NUMBER_SCALES) - 1:
+        value /= 1000
+        scale += 1
+    return '{:.3g}{}'.format(value, _NUMBER_SCALES[scale])
 
 
 def _unsubscribe_entry(label_id, channel_id, channel_title):

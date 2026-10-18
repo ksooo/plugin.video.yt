@@ -280,3 +280,23 @@ msgstr ""
 msgctxt "#30401"
 msgid "History"
 msgstr ""
+
+# video plot, {0} = number such as 6.34K
+msgctxt "#30500"
+msgid "{0} views"
+msgstr ""
+
+# video plot, one view
+msgctxt "#30501"
+msgid "{0} view"
+msgstr ""
+
+# video plot, {0} = number such as 6.34K
+msgctxt "#30502"
+msgid "{0} likes"
+msgstr ""
+
+# video plot, one like
+msgctxt "#30503"
+msgid "{0} like"
+msgstr ""

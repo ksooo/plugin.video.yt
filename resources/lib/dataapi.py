@@ -32,9 +32,16 @@ Channel = collections.namedtuple('Channel', 'channel_id title thumbnail subscrip
 
 Category = collections.namedtuple('Category', 'category_id title')
 
+#: views and likes are None where YouTube hides them, and for videos cached
+#: before the add-on knew them.
 Video = collections.namedtuple(
     'Video',
-    'video_id title description channel_id channel_title published duration thumbnail tags')
+    'video_id title description channel_id channel_title published duration thumbnail tags '
+    'views likes',
+    defaults=(None, None))
+
+#: The parts of a video the listings show. Asking for more costs no more.
+_VIDEO_PARTS = 'snippet,contentDetails,statistics'
 
 _THUMBNAIL_SIZES = ('maxres', 'standard', 'high', 'medium', 'default')
 
@@ -115,7 +122,7 @@ def most_popular(region, category_id, count, auth):
     region; asking for one anyway is refused with 'notFound' or
     'videoChartNotFound'.
     """
-    params = {'part': 'snippet,contentDetails', 'chart': 'mostPopular', 'regionCode': region}
+    params = {'part': _VIDEO_PARTS, 'chart': 'mostPopular', 'regionCode': region}
     if category_id:
         params['videoCategoryId'] = category_id
     return [_video(item) for item in _all_items('videos', params, auth, limit=count)]
@@ -146,7 +153,7 @@ def videos(video_ids, auth):
     details = {}
     for start in range(0, len(video_ids), PAGE_SIZE):
         response = _request('GET', 'videos', {
-            'part': 'snippet,contentDetails',
+            'part': _VIDEO_PARTS,
             'id': ','.join(video_ids[start:start + PAGE_SIZE]),
             'maxResults': PAGE_SIZE,
         }, auth)
@@ -193,6 +200,7 @@ def _request(method, resource, params, auth, payload=None):
 
 def _video(item):
     snippet = item['snippet']
+    statistics = item.get('statistics', {})
     return Video(
         video_id=item['id'],
         title=snippet.get('title', ''),
@@ -202,7 +210,15 @@ def _video(item):
         published=snippet.get('publishedAt', ''),
         duration=_seconds(item.get('contentDetails', {}).get('duration', '')),
         thumbnail=_thumbnail(snippet),
-        tags=snippet.get('tags', []))
+        tags=snippet.get('tags', []),
+        views=_count(statistics, 'viewCount'),
+        likes=_count(statistics, 'likeCount'))
+
+
+def _count(statistics, name):
+    """Return one of a video's counts, None if YouTube hides it."""
+    value = statistics.get(name)
+    return None if value is None else int(value)
 
 
 def _thumbnail(snippet):

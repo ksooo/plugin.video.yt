@@ -276,3 +276,15 @@ class VideoDetailsTest(DataApiTestCase):
         details = self.details({'id': 'v1', 'snippet': {}})
         self.assertEqual((details.title, details.duration, details.thumbnail, details.tags),
                          ('', 0, '', []))
+
+    def test_the_counts_are_taken_over(self):
+        item = dict(video('v1'), statistics={'viewCount': '6340', 'likeCount': '781',
+                                             'favoriteCount': '0', 'commentCount': '167'})
+        details = self.details(item)
+        self.assertEqual((details.views, details.likes), (6340, 781))
+        self.assertEqual(self.requested('videos')[0]['part'],
+                         'snippet,contentDetails,statistics')
+
+    def test_counts_youtube_hides_are_none(self):
+        details = self.details(dict(video('v1'), statistics={'viewCount': '12'}))
+        self.assertEqual((details.views, details.likes), (12, None))

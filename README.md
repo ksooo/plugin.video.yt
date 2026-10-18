@@ -27,6 +27,9 @@ A video's context menu goes to its channel and, when signed in, subscribes to or
 from it. A channel's context menu in the subscriptions unsubscribes from it. Any video plays from
 `plugin://plugin.video.yt/play/?v=<video id>`.
 
+A video's plot starts with its channel and its numbers of views and likes, as far as YouTube shows
+them.
+
 ## Playback
 
 Videos play through `inputstream.adaptive`, which picks the resolution the connection and the

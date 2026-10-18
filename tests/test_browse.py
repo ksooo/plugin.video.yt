@@ -22,6 +22,7 @@ from resources.lib import addon
 from resources.lib import dataapi
 from resources.lib import http
 from resources.lib import innertube
+from resources.lib import listing
 from resources.lib.router import Router
 
 CHANNELS = [dataapi.Channel('UC1', 'Alpha & Omega', 'https://yt3/UC1', 'sub-UC1'),
@@ -209,7 +210,7 @@ class ChannelTest(BrowseTestCase):
         self.assertEqual(list_item.info_tag.values, {
             'MediaType': 'video',
             'Title': 'Never Gonna Give You Up',
-            'Plot': 'The official video.',
+            'Plot': '[B]Alpha & Omega[/B][CR][CR]The official video.',
             'Studios': ['Alpha & Omega'],
             'Premiered': '2009-10-25',
             'Duration': 213,
@@ -427,6 +428,38 @@ class SyncTest(BrowseTestCase):
         self.assertTrue(support.PLUGIN_STATE['succeeded'])
         self.assertEqual(self.errors(),
                          ['[plugin.video.yt] timed out from https://www.youtube.com/'])
+
+
+class PlotTest(BrowseTestCase):
+
+    def plot(self, **changes):
+        self.results['channel_videos'] = [VIDEO._replace(**changes)]
+        return self.dispatch('channel', '?id=UC1&title=Alpha')[0][1].info_tag.values['Plot']
+
+    def test_channel_and_counts_head_the_description(self):
+        self.assertEqual(
+            self.plot(views=6340, likes=781),
+            '[B]Alpha & Omega[/B][CR]'
+            '[COLOR lightblue][B]L30500[/B][/COLOR]  •  [COLOR lime][B]L30502[/B][/COLOR]'
+            '[CR][CR]The official video.')
+
+    def test_a_single_one_has_a_label_of_its_own(self):
+        self.assertIn('[B]L30503[/B]', self.plot(likes=1))
+
+    def test_counts_hidden_or_zero_are_left_out(self):
+        for likes in (None, 0):
+            self.assertEqual(self.plot(views=12, likes=likes), '[B]Alpha & Omega[/B][CR]'
+                             '[COLOR lightblue][B]L30500[/B][/COLOR][CR][CR]The official video.',
+                             likes)
+
+    def test_without_description_the_head_stands_alone(self):
+        self.assertEqual(self.plot(description=''), '[B]Alpha & Omega[/B]')
+
+    def test_numbers_are_rounded_to_three_digits_like_on_youtube(self):
+        for number, short in ((0, '0'), (781, '781'), (6340, '6.34K'), (12345, '12.3K'),
+                              (123456, '123K'), (999999, '1M'), (1234567, '1.23M'),
+                              (16_100_000_000, '16.1B')):
+            self.assertEqual(listing._short_number(number), short, number)
 
 
 class EmojiTest(BrowseTestCase):

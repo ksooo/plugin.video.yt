@@ -99,6 +99,10 @@ opening a channel 4 units, a category of trending videos 2, a search 101,
 subscribing or unsubscribing 50. Finding the trending categories costs one
 unit per category once a day.
 
+A video costs the same whichever parts of it are asked for, so the listings
+take its `statistics` too: the numbers of views and likes head its plot,
+unless the uploader hides them or they are 0.
+
 A signed-in account's token authorizes every request, for its own data as
 for public data. Without a sign-in, the API key does for the public data -
 trending, search, channels. The API reports errors as JSON with a `reason`

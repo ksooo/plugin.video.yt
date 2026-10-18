@@ -89,3 +89,9 @@ class ResultsTest(AddonTestCase):
         with mock.patch.object(addon.time, 'time', return_value=1000000 + 15 * 60):
             self.results()
         self.assertEqual(len(self.searches), 2)
+
+    def test_results_cached_by_an_earlier_version_still_load(self):
+        addon.cached(search.RESULTS_FILE, '\n'.join(('kodi', 'DE', 'de', '50')), 60,
+                     lambda: [list(VIDEO)[:9]])
+        self.assertEqual(self.results(), [VIDEO])
+        self.assertEqual(self.searches, [])
