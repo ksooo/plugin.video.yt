@@ -169,7 +169,7 @@ msgstr "Auf einem Smartphone oder Computer [B]{0}[/B] öffnen und den Code [B]{1
 # sign-in dialogue, purpose of step 1
 msgctxt "#30112"
 msgid "This grants access to your subscriptions."
-msgstr "Damit erhält das Addon Zugriff auf die Abos."
+msgstr "Damit erhält das Addon Zugriff auf die Abonnements."
 
 # sign-in dialogue, purpose of step 2
 msgctxt "#30113"
@@ -204,7 +204,7 @@ msgstr "Die Anmeldung ist nicht mehr gültig. Eine erneute Anmeldung ist nötig.
 # main menu
 msgctxt "#30200"
 msgid "Subscriptions"
-msgstr "Abos"
+msgstr "Abonnements"
 
 # context menu of a video, {0} = channel
 msgctxt "#30201"
@@ -214,12 +214,12 @@ msgstr "Kanal {0} abonnieren"
 # context menu of a video, {0} = channel
 msgctxt "#30202"
 msgid "Unsubscribe from channel {0}"
-msgstr "Abo von Kanal {0} beenden"
+msgstr "Abonnement von Kanal {0} beenden"
 
 # context menu of a channel
 msgctxt "#30203"
 msgid "Unsubscribe"
-msgstr "Abo beenden"
+msgstr "Abonnement beenden"
 
 # context menu of a video, {0} = channel
 msgctxt "#30204"
@@ -239,12 +239,12 @@ msgstr "Kanal {0} abonniert"
 # notification, {0} = channel
 msgctxt "#30211"
 msgid "Unsubscribed from channel {0}"
-msgstr "Abo von Kanal {0} beendet"
+msgstr "Abonnement von Kanal {0} beendet"
 
 # confirmation, {0} = channel
 msgctxt "#30212"
 msgid "Unsubscribe from channel {0}?"
-msgstr "Abo von Kanal {0} beenden?"
+msgstr "Abonnement von Kanal {0} beenden?"
 
 # main menu
 msgctxt "#30300"
