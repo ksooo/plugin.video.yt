@@ -163,7 +163,16 @@ def _keep_preferred_codec(audio_sets):
 def _is_original(data):
     """Whether the audio format belongs to the original audio track."""
     track = data.get('audioTrack')
-    return track is None or bool(track.get('audioIsDefault'))
+    if track is None:
+        return True
+    content = _xtags(data).get('acont')
+    return content == 'original' if content else bool(track.get('audioIsDefault'))
+
+
+def _xtags(data):
+    """Return the tags of a format's URL, e.g. {'acont': 'original', 'lang': 'en-US'}."""
+    xtags = dict(parse_qsl(urlsplit(data.get('url', '')).query)).get('xtags', '')
+    return dict(tag.partition('=')[::2] for tag in xtags.split(':') if tag)
 
 
 def _duration_seconds(formats):

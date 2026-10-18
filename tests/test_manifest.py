@@ -241,3 +241,17 @@ class AudioTest(unittest.TestCase):
                          [('en', 'true', 'true', None),
                           ('de', None, None, None),
                           ('en', None, None, 'true')])
+
+    def test_the_original_is_the_track_tagged_so_not_the_dub_youtube_defaults_to(self):
+        dubbed = audio_format(1251, 'audio/webm; codecs="opus"', 140000,
+                              audioTrack={'id': 'de-DE.10', 'audioIsDefault': True,
+                                          'isAutoDubbed': True})
+        dubbed['url'] += '&xtags=acont%3Ddubbed-auto%3Alang%3Dde-DE'
+        original = audio_format(251, 'audio/webm; codecs="opus"', 140000,
+                                audioTrack={'id': 'en-US.4', 'audioIsDefault': False})
+        original['url'] += '&xtags=acont%3Doriginal%3Alang%3Den-US'
+        audio = adaptation_sets(build([VP9_1080, dubbed, original]), 'audio')
+
+        self.assertEqual([(adaptation_set.get('lang'), adaptation_set.get('original'))
+                          for adaptation_set in audio],
+                         [('en-US', 'true'), ('de-DE', None)])

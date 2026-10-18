@@ -281,6 +281,12 @@ further up, where it would append a slash.
 The video codecs offered come from the setting `video_codecs`; the order of
 preference among them is fixed in `manifest.VIDEO_CODEC_ORDER`.
 
+Each audio track gets AdaptationSets of its own. The original one is the
+track whose URL carries `xtags=acont=original:...`. `audioIsDefault` marks
+the track YouTube picks for the language asked for, which for a video
+dubbed automatically (`acont=dubbed-auto`) is the dub; it only counts where
+a track has no such tag.
+
 Kodi-version notes:
 
 * The `name`, `default`, `original` and `impaired` attributes of an
