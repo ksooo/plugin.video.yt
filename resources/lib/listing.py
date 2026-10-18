@@ -111,14 +111,14 @@ def channel_item(channel):
                        id=channel.channel_id, title=channel.title, parent='subscriptions')
 
 
-def video_item(video, subscribed, link_channel, percent_watched=None):
+def video_item(video, subscribed, liked, link_channel, percent_watched=None):
     """Build the listing tuple of a playable video.
 
     subscribed tells whether the account subscribed to the video's channel,
-    None if nobody is signed in. link_channel tells whether to offer going to
-    the channel. percent_watched, how far the account watched the video on
-    YouTube, overrides the play count and resume point Kodi keeps; None leaves
-    those to Kodi.
+    liked whether it liked the video, both None if nobody is signed in.
+    link_channel tells whether to offer going to the channel. percent_watched,
+    how far the account watched the video on YouTube, overrides the play count
+    and resume point Kodi keeps; None leaves those to Kodi.
     """
     context_menu = []
     if link_channel:
@@ -131,6 +131,10 @@ def video_item(video, subscribed, link_channel, percent_watched=None):
         context_menu.append((addon.localize(30201).format(video.channel_title),
                              'RunPlugin({})'.format(url('subscribe', channel=video.channel_id,
                                                         title=video.channel_title))))
+    if liked is not None:
+        context_menu.append((addon.localize(30701 if liked else 30700),
+                             'RunPlugin({})'.format(url('rate', v=video.video_id,
+                                                        rating='none' if liked else 'like'))))
 
     title = _LEADING_EMOJIS.sub('', video.title) or video.title
 

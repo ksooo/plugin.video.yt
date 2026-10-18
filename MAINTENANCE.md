@@ -109,13 +109,20 @@ unsubscribing within the channel's own listing: that one is left for the
 level above, which Kodi must not cache (`cacheToDisc=False`), so the channel
 is gone there.
 
+### Likes in context menus
+
+Every video offers to like it or to take the like back, so a video listing
+asks for the account's ratings of its videos when signed in. They are not
+cached; a listing is refreshed after a change, as for the subscriptions.
+
 ## YouTube Data API
 
 `dataapi.py` wraps the calls; each notes its quota cost. A project gets
 10,000 units a day. Opening the subscriptions costs 1 unit per 50 channels,
 opening a channel 4 units, a category of trending videos 2, a search 101,
-subscribing or unsubscribing 50. Finding the trending categories costs one
-unit per category once a day.
+subscribing or unsubscribing 50, liking or taking a like back 50. Signed in,
+a listing of videos costs 1 unit more per 50 videos for their ratings.
+Finding the trending categories costs one unit per category once a day.
 
 A video costs the same whichever parts of it are asked for, so the listings
 take its `statistics` too: the numbers of views and likes head its plot,

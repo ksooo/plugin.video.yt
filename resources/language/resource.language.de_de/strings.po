@@ -330,3 +330,23 @@ msgstr "Anstehende Livestreams"
 msgctxt "#30603"
 msgid "Past live streams"
 msgstr "Beendete Livestreams"
+
+# context menu of a video
+msgctxt "#30700"
+msgid "Like"
+msgstr "Like hinzufügen"
+
+# context menu of a video
+msgctxt "#30701"
+msgid "Remove like"
+msgstr "Like entfernen"
+
+# notification
+msgctxt "#30702"
+msgid "Like added"
+msgstr "Like hinzugefügt"
+
+# notification
+msgctxt "#30703"
+msgid "Like removed"
+msgstr "Like entfernt"

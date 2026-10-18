@@ -41,6 +41,8 @@ SHELVES = [innertube.Shelf('Empfohlen', ['r1', 'r2']),
 
 SUBSCRIPTIONS_CACHE = os.path.join(support.PROFILE_DIR, 'subscriptions.json')
 
+LIKE = ('L30700', 'RunPlugin(plugin://plugin.video.yt/rate/?rating=like&v=dQw4w9WgXcQ)')
+
 
 class BrowseTestCase(AddonTestCase):
 
@@ -54,7 +56,8 @@ class BrowseTestCase(AddonTestCase):
                         'most_popular': [VIDEO], 'search': [VIDEO], 'videos': [VIDEO],
                         'video_categories': [dataapi.Category('10', 'Musik'),
                                              dataapi.Category('20', 'Gaming')],
-                        'subscribe': 'sub-new', 'unsubscribe': None}
+                        'subscribe': 'sub-new', 'unsubscribe': None,
+                        'ratings': {}, 'rate': None}
         self.failure = None
         for name in self.results:
             patcher = mock.patch.object(dataapi, name, self._query(name))
@@ -339,14 +342,16 @@ class ChannelTest(BrowseTestCase):
         list_item = self.channel()[0][1]
         self.assertEqual(list_item.context_menu, [(
             'L30202',
-            'RunPlugin(plugin://plugin.video.yt/unsubscribe/?channel=UC1&title=Alpha+%26+Omega)')])
+            'RunPlugin(plugin://plugin.video.yt/unsubscribe/?channel=UC1&title=Alpha+%26+Omega)'),
+            LIKE])
 
     def test_another_channels_videos_offer_subscribing(self):
         self.cache_channels({'UC2': 'sub-UC2'})
         list_item = self.channel()[0][1]
         self.assertEqual(list_item.context_menu, [(
             'L30201',
-            'RunPlugin(plugin://plugin.video.yt/subscribe/?channel=UC1&title=Alpha+%26+Omega)')])
+            'RunPlugin(plugin://plugin.video.yt/subscribe/?channel=UC1&title=Alpha+%26+Omega)'),
+            LIKE])
 
     def test_a_recent_cache_spares_asking_for_the_subscriptions(self):
         self.cache_channels({'UC1': 'sub-UC1'}, age=3500)
@@ -393,14 +398,15 @@ class TrendingTest(BrowseTestCase):
     def test_videos_lead_to_their_channel_and_know_the_subscription(self):
         self.cache_channels({'UC1': 'sub-UC1'})
         list_item = self.category()[0][1]
-        self.assertEqual([entry[0] for entry in list_item.context_menu], ['L30204', 'L30202'])
+        self.assertEqual([entry[0] for entry in list_item.context_menu],
+                         ['L30204', 'L30202', 'L30700'])
         self.assertEqual(list_item.context_menu[0], GO_TO_CHANNEL)
 
     def test_the_entries_name_the_channel(self):
         self.cache_channels({})
         with mock.patch.object(addon, 'localize', lambda string_id: 'L{} {{0}}'.format(string_id)):
             list_item = self.category()[0][1]
-        self.assertEqual([entry[0] for entry in list_item.context_menu],
+        self.assertEqual([entry[0] for entry in list_item.context_menu[:2]],
                          ['L30204 Alpha & Omega', 'L30201 Alpha & Omega'])
 
     def test_without_sign_in_the_api_key_is_used_and_nobody_subscribes(self):
@@ -722,6 +728,51 @@ class SubscriptionChangeTest(BrowseTestCase):
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30103')])
         self.assertEqual(support.BUILTINS, [])
         self.assertNotIn('succeeded', support.PLUGIN_STATE)
+
+
+class RatingTest(BrowseTestCase):
+
+    def category(self):
+        return self.dispatch('trending/category', '?id=10&title=Musik')
+
+    def act(self, rating):
+        support.reset_output()
+        Router([support.BASE_URL + 'rate/', '-1', '?rating={}&v=v1'.format(rating)]).dispatch()
+
+    def test_the_ratings_of_the_listed_videos_are_asked_for(self):
+        self.category()
+        self.assertEqual(self.queried('ratings'), [(['dQw4w9WgXcQ'],)])
+
+    def test_a_video_not_liked_offers_liking(self):
+        self.results['ratings'] = {'dQw4w9WgXcQ': 'dislike'}
+        self.assertEqual(self.category()[0][1].context_menu[-1], LIKE)
+
+    def test_a_liked_video_offers_taking_the_like_back(self):
+        self.results['ratings'] = {'dQw4w9WgXcQ': 'like'}
+        self.assertEqual(self.category()[0][1].context_menu[-1], (
+            'L30701', 'RunPlugin(plugin://plugin.video.yt/rate/?rating=none&v=dQw4w9WgXcQ)'))
+
+    def test_a_channels_videos_know_their_rating_too(self):
+        self.results['ratings'] = {'dQw4w9WgXcQ': 'like'}
+        list_item = self.dispatch('channel', '?id=UC1&title=Alpha')[0][1]
+        self.assertEqual(list_item.context_menu[-1][0], 'L30701')
+
+    def test_liking_is_reported_and_the_listing_refreshed(self):
+        self.act('like')
+        self.assertEqual(self.queried('rate'), [('v1', 'like')])
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30702')])
+        self.assertEqual(support.BUILTINS, ['Container.Refresh'])
+
+    def test_taking_the_like_back_rates_the_video_none(self):
+        self.act('none')
+        self.assertEqual(self.queried('rate'), [('v1', 'none')])
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30703')])
+
+    def test_a_failed_rating_is_reported_without_refreshing(self):
+        self.failure = dataapi.DataApiError('forbidden')
+        self.act('like')
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30103')])
+        self.assertEqual(support.BUILTINS, [])
 
 
 class FailureTest(BrowseTestCase):

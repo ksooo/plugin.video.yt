@@ -106,13 +106,14 @@ class Router:
             subscribed = None
             if auth.token:
                 subscribed = channel_id in subscriptions.subscription_ids(auth)
-            return dataapi.channel_videos(channel_id, VIDEO_COUNT, auth=auth), subscribed
+            videos = dataapi.channel_videos(channel_id, VIDEO_COUNT, auth=auth)
+            return videos, subscribed, self._likes(videos, auth)
 
         result = self._query_data_api(query)
         if result is None:
             return
 
-        videos, subscribed = result
+        videos, subscribed, likes = result
         # Newest first as the default, Kodi offers no way to make its own date
         # sorting start descending.
         videos = sorted(videos, key=lambda video: video.published, reverse=True)
@@ -121,7 +122,8 @@ class Router:
             category = listing.breadcrumb(addon.localize(30200), title)
         progress = self._watch_progress()
         listing.finish_videos(self._handle,
-                              [listing.video_item(video, subscribed, link_channel=False,
+                              [listing.video_item(video, subscribed, likes.get(video.video_id),
+                                                  link_channel=False,
                                                   percent_watched=progress.get(video.video_id))
                                for video in videos],
                               category)
@@ -251,15 +253,16 @@ class Router:
         With nothing_found_label_id, finding no video is reported with that
         message and Kodi stays where it is.
         """
-        def videos_and_subscriptions(auth):
+        def videos_and_account(auth):
             ids = subscriptions.subscription_ids(auth) if auth.token else None
-            return query(auth), ids
+            videos = query(auth)
+            return videos, ids, self._likes(videos, auth)
 
-        result = self._query_data_api(videos_and_subscriptions, need_account=need_account)
+        result = self._query_data_api(videos_and_account, need_account=need_account)
         if result is None:
             return
 
-        videos, ids = result
+        videos, ids, likes = result
         if not videos and nothing_found_label_id is not None:
             self._fail(addon.localize(nothing_found_label_id), listing_route=True)
             return
@@ -268,10 +271,19 @@ class Router:
         listing.finish_videos(self._handle,
                               [listing.video_item(video,
                                                   None if ids is None else video.channel_id in ids,
+                                                  likes.get(video.video_id),
                                                   link_channel=True,
                                                   percent_watched=progress.get(video.video_id))
                                for video in videos],
                               category)
+
+    @staticmethod
+    def _likes(videos, auth):
+        """Return whether the account liked each of the videos by id, empty if not signed in."""
+        if not auth.token:
+            return {}
+        ratings = dataapi.ratings([video.video_id for video in videos], auth=auth)
+        return {video.video_id: ratings.get(video.video_id) == 'like' for video in videos}
 
     @staticmethod
     def _watch_progress():
@@ -328,6 +340,19 @@ class Router:
 
         addon.notify(addon.localize(done_label_id).format(self._params.get('title', '')))
         return True
+
+    def _rate(self):
+        """Like a video or take the like back, run from a context menu. Parameters: v, rating."""
+        like = self._params.get('rating') == 'like'
+
+        def rated(auth):
+            dataapi.rate(self._params.get('v', ''), 'like' if like else 'none', auth=auth)
+            return True
+
+        if self._query_data_api(rated, need_account=True, listing_route=False):
+            addon.notify(addon.localize(30702 if like else 30703))
+            # The context menus of the listing have to follow.
+            xbmc.executebuiltin('Container.Refresh')
 
     def _play(self):
         """Play the video given by its id. Parameter: v."""
@@ -390,6 +415,7 @@ _ROUTES = {
     'search/forget': Router._forget_search,
     'subscribe': Router._subscribe,
     'unsubscribe': Router._unsubscribe,
+    'rate': Router._rate,
     'play': Router._play,
     'signin': Router._sign_in,
     'signout': Router._sign_out,

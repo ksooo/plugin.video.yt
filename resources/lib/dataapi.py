@@ -162,6 +162,24 @@ def videos(video_ids, auth):
     return [details[video_id] for video_id in video_ids if video_id in details]
 
 
+def ratings(video_ids, auth):
+    """Return the account's ratings of the videos by id. 1 unit per 50 videos.
+
+    A rating is 'like', 'dislike' or 'none'.
+    """
+    result = {}
+    for start in range(0, len(video_ids), PAGE_SIZE):
+        response = _request('GET', 'videos/getRating',
+                            {'id': ','.join(video_ids[start:start + PAGE_SIZE])}, auth)
+        result.update((item['videoId'], item['rating']) for item in response.get('items', []))
+    return result
+
+
+def rate(video_id, rating, auth):
+    """Rate the video 'like' or 'dislike', or take the rating back with 'none'. 50 units."""
+    _request('POST', 'videos/rate', {'id': video_id, 'rating': rating}, auth)
+
+
 def _all_items(resource, params, auth, limit=None):
     """Yield the items of all pages, at most limit of them."""
     count = 0
