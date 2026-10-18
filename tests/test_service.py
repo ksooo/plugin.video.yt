@@ -128,21 +128,36 @@ class ServiceTest(AddonTestCase):
         self.play_count(0)
         self.assertEqual(feeds.watch_progress('access-vr'), {'xyz': 10})
 
-    def test_a_folder_of_the_add_on_is_listed_anew_once_per_change(self):
+    def test_a_folder_of_the_add_on_is_listed_anew_once_after_changes(self):
         support.INFO_LABELS['Container.FolderPath'] = 'plugin://plugin.video.yt/channel/?id=UC1'
         self.play_count(0)
         self.resume_point(50.0)
-        self.assertEqual(support.BUILTINS, ['Container.Refresh', 'Container.Refresh'])
+        self.assertEqual(support.BUILTINS, [])
+        self.service.refresh()
+        self.service.refresh()
+        self.assertEqual(support.BUILTINS, ['Container.Refresh'])
+
+    def test_the_folder_is_listed_anew_once_kodi_is_done_listing_it_itself(self):
+        support.INFO_LABELS['Container.FolderPath'] = 'plugin://plugin.video.yt/history/'
+        self.play_count(0)
+        support.CONDITIONS.add('Window.IsVisible(busydialog)')
+        self.service.refresh()
+        self.assertEqual(support.BUILTINS, [])
+        support.CONDITIONS.clear()
+        self.service.refresh()
+        self.assertEqual(support.BUILTINS, ['Container.Refresh'])
 
     def test_other_folders_are_left_as_they_are(self):
         support.INFO_LABELS['Container.FolderPath'] = 'videodb://movies/titles/'
         self.play_count(0)
+        self.service.refresh()
         self.assertEqual(support.BUILTINS, [])
 
     def test_a_video_not_in_the_history_changes_no_folder(self):
         support.INFO_LABELS['Container.FolderPath'] = 'plugin://plugin.video.yt/history/'
         self.in_history = False
         self.play_count(0)
+        self.service.refresh()
         self.assertEqual(support.BUILTINS, [])
 
     def test_other_files_are_left_alone(self):

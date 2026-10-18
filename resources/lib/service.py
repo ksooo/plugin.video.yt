@@ -51,10 +51,13 @@ class Service(xbmc.Monitor):
         self._resets = {}
         #: Video ids whose play count changed, with the time it did.
         self._play_counts = {}
+        #: Whether a folder of the add-on is to show a change made to the history.
+        self._refresh_due = False
 
     def run(self):
         while not self.waitForAbort(1):
             self.handle_resets(time.monotonic())
+            self.refresh()
 
     def onNotification(self, sender, method, data):
         if method not in (PLAY_COUNT_CHANGED, RESUME_POINT_CHANGED):
@@ -69,11 +72,11 @@ class Service(xbmc.Monitor):
             self._resets.pop(video_id, None)
             self._play_counts[video_id] = now
             if data['playcount'] > 0:
-                _sync(_report, video_id, None)
+                self._sync(_report, video_id, None)
             else:
-                _sync(_remove, video_id)
+                self._sync(_remove, video_id)
         elif data['resume']['position'] > 0:
-            _sync(_replace, video_id, data['resume']['position'])
+            self._sync(_replace, video_id, data['resume']['position'])
         elif now - self._play_counts.get(video_id, -math.inf) >= PLAY_COUNT_WAIT_SECONDS:
             self._resets[video_id] = now
 
@@ -85,7 +88,31 @@ class Service(xbmc.Monitor):
         for video_id, reset_at in list(self._resets.items()):
             if now - reset_at >= PLAY_COUNT_WAIT_SECONDS:
                 del self._resets[video_id]
-                _sync(_remove, video_id)
+                self._sync(_remove, video_id)
+
+    def refresh(self):
+        """List a folder of the add-on anew after a change, once Kodi is done listing it itself.
+
+        Kodi lists a folder anew right after changing a video in it, before the
+        history has the change, and drops a refresh asked for meanwhile. While it
+        lists a plugin's folder, it shows its busy dialogue.
+        """
+        if not self._refresh_due or xbmc.getCondVisibility('Window.IsVisible(busydialog)'):
+            return
+        self._refresh_due = False
+        if xbmc.getInfoLabel('Container.FolderPath').startswith(listing.BASE_URL):
+            xbmc.executebuiltin('Container.Refresh')
+
+    def _sync(self, change, video_id, *args):
+        """Apply a change to the watch history, if syncing."""
+        token = account.sync_token()
+        if token is None:
+            return
+        try:
+            if change(video_id, token, *args):
+                self._refresh_due = True
+        except http.RequestError as error:
+            addon.log_error(str(error))
 
 
 def run():
@@ -97,22 +124,6 @@ def _video_id(file):
     if not file.startswith(listing.url('play')):
         return None
     return dict(parse_qsl(urlsplit(file).query)).get('v')
-
-
-def _sync(change, video_id, *args):
-    """Apply a change to the watch history, if syncing, and show it."""
-    token = account.sync_token()
-    if token is None:
-        return
-    try:
-        changed = change(video_id, token, *args)
-    except http.RequestError as error:
-        addon.log_error(str(error))
-        return
-    # Kodi lists a folder anew right after changing a video in it, before the
-    # history has the change.
-    if changed and xbmc.getInfoLabel('Container.FolderPath').startswith(listing.BASE_URL):
-        xbmc.executebuiltin('Container.Refresh')
 
 
 def _remove(video_id, token):

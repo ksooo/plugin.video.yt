@@ -250,8 +250,9 @@ just waits.
   and playing it to the end, change both, in either order.
 
 Kodi lists a folder anew right after changing a video in it, before the
-history has the change, so the service refreshes a folder of the add-on
-once more after each change it made.
+history has the change, so the service lists a folder of the add-on anew
+once more after the changes it made. It waits for Kodi's busy dialogue to
+go first: Kodi drops a refresh asked for while it is still listing.
 
 ### The manifest
 

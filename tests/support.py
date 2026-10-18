@@ -30,6 +30,8 @@ INPUT_ANSWER = ['']
 PLUGIN_ITEMS = []
 PLUGIN_STATE = {}
 INFO_LABELS = {}
+#: The conditions getCondVisibility() finds true, besides a paused playback.
+CONDITIONS = set()
 LANGUAGE = ['de']
 ABORT_REQUESTED = [False]
 DEFAULT_SETTINGS = {
@@ -96,7 +98,8 @@ class Player:
 
 xbmc.Monitor = Monitor
 xbmc.Player = Player
-xbmc.getCondVisibility = lambda condition: (condition == 'Player.Paused'
+xbmc.getCondVisibility = lambda condition: (condition in CONDITIONS
+                                            or condition == 'Player.Paused'
                                             and bool(PLAYBACK) and PLAYBACK[0] is not None
                                             and PLAYBACK[0][2])
 
@@ -280,6 +283,7 @@ def reset_output():
 def reset():
     reset_output()
     INFO_LABELS.clear()
+    CONDITIONS.clear()
     LANGUAGE[0] = 'de'
     ABORT_REQUESTED[0] = False
     CONFIRM_ANSWER[0] = True
