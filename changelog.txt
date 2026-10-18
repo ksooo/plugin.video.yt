@@ -1,3 +1,7 @@
+v1.1.1
+- With Kodi 23, a video marked unwatched or whose resume point was reset now leaves the History folder right away
+- With Kodi 23, a video watched to the end in Kodi now stays in your YouTube watch history
+
 v1.1.0
 - New folder "Live" with the live streams YouTube features now, the upcoming ones and those just ended
 - New folder "All subscriptions" with the newest videos of all subscribed channels together
