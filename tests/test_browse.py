@@ -806,10 +806,15 @@ class FailureTest(BrowseTestCase):
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30106')])
         self.assertFalse(support.PLUGIN_STATE['succeeded'])
 
-    def test_a_used_up_quota_is_named(self):
+    def test_a_used_up_quota_is_named_with_the_time_it_is_back(self):
         self.failure = dataapi.DataApiError('quotaExceeded')
-        self.dispatch('subscriptions')
-        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30104')])
+        reset = time.time() + 3600
+        localize = mock.patch.object(addon, 'localize',
+                                     lambda string_id: 'L{} {{0}}'.format(string_id))
+        with mock.patch.object(dataapi, 'quota_reset', return_value=reset), localize:
+            self.dispatch('subscriptions')
+        self.assertEqual(support.NOTIFICATIONS,
+                         [('YouTube', 'L30104 ' + time.strftime('%H:%M', time.localtime(reset)))])
         self.assertFalse(support.PLUGIN_STATE['succeeded'])
 
     def test_other_refusals_are_reported_and_logged(self):

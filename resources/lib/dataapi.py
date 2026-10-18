@@ -12,8 +12,10 @@ Every call costs quota, 10,000 units a day per Google Cloud project. The
 functions note what they cost.
 """
 
+import calendar
 import collections
 import re
+import time
 from urllib.parse import urlencode
 
 from . import http
@@ -50,6 +52,31 @@ _DURATION = re.compile(r'^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$')
 
 class DataApiError(Exception):
     """The API refused. The message is its reason, e.g. 'quotaExceeded'."""
+
+
+def quota_reset(now):
+    """Return when the daily quota starts anew after the Unix time now: at midnight Pacific Time."""
+    offset = _pacific_offset(now)
+    midnight = (now + offset) // 86400 * 86400 + 86400
+    return midnight - _pacific_offset(midnight - offset)
+
+
+def _pacific_offset(moment):
+    """Return the offset of Pacific Time from UTC at the Unix time, in seconds.
+
+    Daylight saving time runs from the second Sunday in March to the first one
+    in November, from 2:00 local time on.
+    """
+    year = time.gmtime(moment).tm_year
+    starts = _sunday(year, 3, 2) + 10 * 3600
+    ends = _sunday(year, 11, 1) + 9 * 3600
+    return (-7 if starts <= moment < ends else -8) * 3600
+
+
+def _sunday(year, month, number):
+    """Return the Unix time of the start, in UTC, of the month's Sunday with the number."""
+    first = calendar.timegm((year, month, 1, 0, 0, 0))
+    return first + ((6 - time.gmtime(first).tm_wday) % 7 + 7 * (number - 1)) * 86400
 
 
 def subscriptions(auth):

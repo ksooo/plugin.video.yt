@@ -134,7 +134,9 @@ unless the uploader hides them or they are 0.
 A signed-in account's token authorizes every request, for its own data as
 for public data. Without a sign-in, the API key does for the public data -
 trending, search, channels. The API reports errors as JSON with a `reason`
-such as `quotaExceeded`, which the add-on turns into a notification.
+such as `quotaExceeded`, which the add-on turns into a notification; a used
+up quota names the time it starts anew, midnight Pacific Time
+(`dataapi.quota_reset()`).
 
 ## Signing in
 

@@ -13,6 +13,7 @@ e.g. plugin://plugin.video.yt/play/?v=<id>. Kodi stores resume points and play
 counts under these URLs, so the URL of a video must never change.
 """
 
+import time
 from urllib.parse import parse_qsl
 from urllib.parse import urlsplit
 
@@ -390,8 +391,10 @@ class Router:
             return query(dataapi.Auth(token, api_key))
         except dataapi.DataApiError as error:
             addon.log_error('YouTube Data API: {}'.format(error))
-            return self._fail(addon.localize(30104 if str(error) == 'quotaExceeded' else 30103),
-                              listing_route)
+            if str(error) == 'quotaExceeded':
+                _, reset = addon.local_date_time(dataapi.quota_reset(time.time()))
+                return self._fail(addon.localize(30104).format(reset), listing_route)
+            return self._fail(addon.localize(30103), listing_route)
         except http.RequestError as error:
             addon.log_error(str(error))
             return self._fail(addon.localize(30101), listing_route)

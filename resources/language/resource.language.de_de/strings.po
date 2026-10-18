@@ -146,10 +146,10 @@ msgctxt "#30103"
 msgid "YouTube refused the request."
 msgstr "YouTube hat die Anfrage abgelehnt."
 
-# notification
+# notification, {0} = time
 msgctxt "#30104"
-msgid "The daily quota of the YouTube Data API is used up."
-msgstr "Das Tageskontingent der YouTube Data API ist aufgebraucht."
+msgid "The daily quota of the YouTube Data API is used up. It is available again from {0}."
+msgstr "Das Tageskontingent der YouTube Data API ist aufgebraucht. Es steht ab {0} wieder zur Verfügung."
 
 # notification
 msgctxt "#30105"

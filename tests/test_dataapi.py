@@ -8,6 +8,7 @@
 #
 """Tests for resources.lib.dataapi."""
 
+import calendar
 import unittest
 from unittest import mock
 from urllib.parse import parse_qsl
@@ -120,6 +121,31 @@ class SubscriptionsTest(DataApiTestCase):
         with self.assertRaises(dataapi.DataApiError) as context:
             dataapi.subscriptions(auth=USER)
         self.assertEqual(str(context.exception), 'quotaExceeded')
+
+
+class QuotaResetTest(unittest.TestCase):
+
+    @staticmethod
+    def utc(*moment):
+        return calendar.timegm(moment + (0,) * (6 - len(moment)))
+
+    def test_it_is_midnight_pacific_standard_time_in_winter(self):
+        self.assertEqual(dataapi.quota_reset(self.utc(2026, 1, 15, 20)), self.utc(2026, 1, 16, 8))
+
+    def test_it_is_midnight_pacific_daylight_time_in_summer(self):
+        self.assertEqual(dataapi.quota_reset(self.utc(2026, 7, 15, 20)), self.utc(2026, 7, 16, 7))
+
+    def test_at_midnight_itself_the_next_one_is_meant(self):
+        self.assertEqual(dataapi.quota_reset(self.utc(2026, 7, 16, 7)), self.utc(2026, 7, 17, 7))
+
+    def test_after_the_switch_to_daylight_saving_time_midnight_is_in_it(self):
+        # 1:30 on Sunday, 8 March 2026, still standard time
+        self.assertEqual(dataapi.quota_reset(self.utc(2026, 3, 8, 9, 30)), self.utc(2026, 3, 9, 7))
+
+    def test_after_the_switch_to_standard_time_midnight_is_in_it(self):
+        # 1:30 on Sunday, 1 November 2026, still daylight saving time
+        self.assertEqual(dataapi.quota_reset(self.utc(2026, 11, 1, 8, 30)),
+                         self.utc(2026, 11, 2, 8))
 
 
 class SubscribeTest(DataApiTestCase):
