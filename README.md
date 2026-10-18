@@ -9,8 +9,9 @@ as folders in Kodi's video window.
 
 The top level offers:
 
-* **Subscriptions**, when signed in: the channels, below each channel its 100 newest videos -
-  those of the channel's **Videos** tab on YouTube, so neither shorts nor live recordings.
+* **Subscriptions**, when signed in: **All subscriptions**, the 100 newest videos of all subscribed
+  channels together, then the channels, below each channel its 100 newest videos - those of the
+  channel's **Videos** tab on YouTube, so neither shorts nor live recordings.
 * **Recommendations**, when signed in: YouTube's recommendations for you, in the shelves of the
   YouTube app's home - "Recommended", "Recently uploaded", topics and so on.
 * **Trending**: **All trends**, then YouTube's categories such as music, gaming or sports, each

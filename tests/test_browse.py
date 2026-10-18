@@ -23,6 +23,7 @@ from resources.lib import dataapi
 from resources.lib import http
 from resources.lib import innertube
 from resources.lib import listing
+from resources.lib import rss
 from resources.lib.router import Router
 
 CHANNELS = [dataapi.Channel('UC1', 'Alpha & Omega', 'https://yt3/UC1', 'sub-UC1'),
@@ -147,10 +148,16 @@ class SubscriptionsTest(BrowseTestCase):
     def test_the_channels_are_listed_as_folders(self):
         items = self.dispatch('subscriptions')
 
-        self.assertEqual(self.labels(items), ['Alpha & Omega', 'Beta'])
+        self.assertEqual(self.labels(items)[1:], ['Alpha & Omega', 'Beta'])
         self.assertTrue(all(is_folder for _, _, is_folder in items))
-        self.assertEqual(self.urls(items)[0], 'plugin://plugin.video.yt/channel/'
+        self.assertEqual(self.urls(items)[1], 'plugin://plugin.video.yt/channel/'
                                               '?id=UC1&parent=subscriptions&title=Alpha+%26+Omega')
+
+    def test_the_latest_videos_stay_first_whatever_the_sorting(self):
+        url, list_item, is_folder = self.dispatch('subscriptions')[0]
+        self.assertEqual((list_item.label, url, is_folder),
+                         ('L30205', 'plugin://plugin.video.yt/subscriptions/latest/', True))
+        self.assertEqual(list_item.properties['SpecialSort'], 'top')
 
     def test_they_are_asked_for_with_the_users_token(self):
         self.dispatch('subscriptions')
@@ -163,12 +170,12 @@ class SubscriptionsTest(BrowseTestCase):
 
     def test_channels_show_their_picture(self):
         items = self.dispatch('subscriptions')
-        self.assertEqual(items[0][1].art['thumb'], 'https://yt3/UC1')
-        self.assertEqual(items[1][1].art, {'icon': 'DefaultFolder.png'})
+        self.assertEqual(items[1][1].art['thumb'], 'https://yt3/UC1')
+        self.assertEqual(items[2][1].art, {'icon': 'DefaultFolder.png'})
 
     def test_channels_can_be_unsubscribed_from(self):
         items = self.dispatch('subscriptions')
-        self.assertEqual(items[0][1].context_menu, [(
+        self.assertEqual(items[1][1].context_menu, [(
             'L30203',
             'RunPlugin(plugin://plugin.video.yt/unsubscribe/?channel=UC1&title=Alpha+%26+Omega)')])
 
@@ -179,6 +186,38 @@ class SubscriptionsTest(BrowseTestCase):
     def test_kodi_does_not_cache_the_listing(self):
         self.dispatch('subscriptions')
         self.assertFalse(support.PLUGIN_STATE['cacheToDisc'])
+
+
+class LatestTest(BrowseTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.uploads = ['n{}'.format(number) for number in range(120)]
+        self.feeds = []
+        patcher = mock.patch.object(rss, 'uploads', self._uploads)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _uploads(self, channel_ids):
+        self.feeds.append(sorted(channel_ids))
+        return self.uploads
+
+    def test_the_newest_hundred_of_all_subscribed_channels_are_listed(self):
+        self.cache_channels({'UC1': 'sub-UC1', 'UC2': 'sub-UC2'})
+        self.dispatch('subscriptions/latest')
+        self.assertEqual(self.feeds, [['UC1', 'UC2']])
+        self.assertEqual(self.queried('videos'), [(self.uploads[:100],)])
+        self.assertEqual(support.PLUGIN_STATE['category'], 'L30200 / L30205')
+
+    def test_they_lead_to_their_channel(self):
+        list_item = self.dispatch('subscriptions/latest')[0][1]
+        self.assertEqual(list_item.context_menu[0][0], 'L30204')
+
+    def test_without_sign_in_the_user_is_told(self):
+        self.sign_out(api_key='key-1')
+        self.dispatch('subscriptions/latest')
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30105')])
+        self.assertEqual(self.feeds, [])
 
 
 class LiveTest(BrowseTestCase):

@@ -54,6 +54,19 @@ def post_form(url, fields):
     return _fetch_json(request, url, error_body=True)
 
 
+def get(url, headers):
+    """GET the URL and return the body, None if there is nothing at it (HTTP 404)."""
+    try:
+        with urlopen(Request(url, headers=headers), timeout=TIMEOUT_SECONDS) as response:
+            return response.read()
+    except HTTPError as error:
+        if error.code == 404:
+            return None
+        raise RequestError('HTTP {} from {}'.format(error.code, url)) from error
+    except (URLError, OSError) as error:
+        raise RequestError('{} from {}'.format(error, url)) from error
+
+
 def _fetch_json(request, url, error_body):
     try:
         with urlopen(request, timeout=TIMEOUT_SECONDS) as response:

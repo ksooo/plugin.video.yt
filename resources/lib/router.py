@@ -31,7 +31,8 @@ from . import search
 from . import subscriptions
 from . import trends
 
-#: The most videos listed for a channel or a category of trending videos.
+#: The most videos listed for a channel, a category of trending videos or the
+#: newest videos of the subscriptions.
 VIDEO_COUNT = 100
 
 #: The most videos listed for a search; a page of 50 costs 101 quota units.
@@ -80,15 +81,21 @@ class Router:
         listing.finish_folders(self._handle, items, addon.ADDON_NAME)
 
     def _list_subscriptions(self):
-        """Show the subscribed channels."""
+        """Show the newest videos of the subscriptions, then the subscribed channels."""
         channels = self._query_data_api(subscriptions.list_channels, need_account=True)
         if channels is None:
             return
 
+        items = [listing.folder_item(addon.localize(30205), 'subscriptions/latest', on_top=True)]
+        items.extend(listing.channel_item(channel) for channel in channels)
         # Going back to it after unsubscribing must not show the channel.
-        listing.finish_folders(self._handle, [listing.channel_item(channel)
-                                              for channel in channels],
-                               addon.localize(30200), cache=False)
+        listing.finish_folders(self._handle, items, addon.localize(30200), cache=False)
+
+    def _list_latest(self):
+        """Show the newest videos of all subscribed channels, the newest first."""
+        self._list_videos(lambda auth: dataapi.videos(
+            subscriptions.latest_video_ids(VIDEO_COUNT, auth), auth=auth),
+            listing.breadcrumb(addon.localize(30200), addon.localize(30205)), need_account=True)
 
     def _list_channel(self):
         """Show the newest videos of a channel. Parameters: id, title, parent."""
@@ -367,6 +374,7 @@ class Router:
 _ROUTES = {
     '': Router._list_root,
     'subscriptions': Router._list_subscriptions,
+    'subscriptions/latest': Router._list_latest,
     'channel': Router._list_channel,
     'recommended': Router._list_recommendations,
     'recommended/shelf': Router._list_recommendation_shelf,

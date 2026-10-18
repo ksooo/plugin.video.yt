@@ -28,6 +28,13 @@ those in a playlist of its own: `UULF` followed by the channel id without its
 `UC`. It holds neither shorts (`UUSH`) nor live recordings (`UULV`), and
 does not exist for a channel without a single such video.
 
+"All subscriptions" merges the same playlists of all subscribed channels.
+The Data API would cost a unit per channel, so `rss.py` reads YouTube's RSS
+feeds instead, `feeds/videos.xml?playlist_id=UULF...`, eight at a time:
+no quota, the 15 newest videos of each. Only the details of the newest 100
+go through the Data API. The folder is kept on top of the channels with the
+`SpecialSort` property.
+
 Every video listing comes in an order of its own, which "Default", the first
 sort method, keeps: a channel newest first, the history last watched first,
 search, trending and recommendations in YouTube's order. Kodi's "Date" would

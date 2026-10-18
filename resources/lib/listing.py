@@ -67,10 +67,12 @@ def video_thumbnail(video_id):
     return 'https://i.ytimg.com/vi/{}/hqdefault.jpg'.format(video_id)
 
 
-def folder_item(label, route, thumbnail='', context_menu=(), **params):
-    """Build the listing tuple of a folder."""
+def folder_item(label, route, thumbnail='', context_menu=(), on_top=False, **params):
+    """Build the listing tuple of a folder. on_top keeps it first whatever the sorting."""
     list_item = xbmcgui.ListItem(label=label, offscreen=True)
     list_item.setIsFolder(True)
+    if on_top:
+        list_item.setProperty('SpecialSort', 'top')
     if thumbnail:
         list_item.setArt({'thumb': thumbnail, 'icon': thumbnail})
     else:

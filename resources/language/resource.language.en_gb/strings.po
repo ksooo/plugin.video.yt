@@ -226,6 +226,11 @@ msgctxt "#30204"
 msgid "Go to channel {0}"
 msgstr ""
 
+# first folder below subscriptions, above the channels
+msgctxt "#30205"
+msgid "All subscriptions"
+msgstr ""
+
 # notification, {0} = channel
 msgctxt "#30210"
 msgid "Subscribed to channel {0}"

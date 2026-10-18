@@ -19,6 +19,7 @@ import time
 from . import account
 from . import addon
 from . import dataapi
+from . import rss
 
 MAX_AGE_SECONDS = 3600
 
@@ -36,6 +37,11 @@ def subscription_ids(auth):
     if cache is not None and time.time() - cache['saved_at'] < MAX_AGE_SECONDS:
         return cache['channels']
     return _fresh_ids(auth)
+
+
+def latest_video_ids(count, auth):
+    """Return the ids of the newest videos of all subscribed channels, the newest first."""
+    return rss.uploads(list(subscription_ids(auth)))[:count]
 
 
 def subscribe(channel_id, auth):
