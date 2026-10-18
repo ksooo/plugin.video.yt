@@ -194,6 +194,16 @@ class FailureTest(PlaybackTestCase):
         self.play()
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30100')])
 
+    def test_an_upcoming_stream_tells_its_start_in_kodis_own_words(self):
+        self.response = innertube.PlayabilityError('Diese Live-Veranstaltung beginnt in 4 Tage.',
+                                                   starts_at=1792688400)
+        with mock.patch.object(addon, 'localize', lambda string_id: '{} am {{}} um {{}}'.format(
+                string_id)), \
+                mock.patch.object(addon.time, 'localtime', time.gmtime):
+            resolved, _ = self.play()
+        self.assertFalse(resolved)
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', '30108 am 22.10.2026 um 17:00')])
+
     def test_a_network_failure_is_shown_and_logged(self):
         self.response = http.RequestError('timed out from https://www.youtube.com/')
         resolved, _ = self.play()

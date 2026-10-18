@@ -61,6 +61,17 @@ A channel's breadcrumb only names the subscriptions when the channel was
 opened from there - the `parent` parameter of its URL says so. Gone to from
 any other listing, it just names the channel.
 
+### Live
+
+The Data API finds live streams only by `search.list` with an `eventType`,
+at 100 units a page. YouTube's own live channel (`innertube.LIVE_CHANNEL`)
+shows them for free: its tabs of the streams live now, upcoming and recently
+ended, about 15 each, which `innertube.get_live_videos()` browses by their
+`params`. Only the web app gets them - the channel is empty for the Quest
+app - and it does without signing in. The details come from the Data API as
+everywhere else. Should YouTube change the tabs' `params`, the folders turn
+up empty: the web page `youtube.com/@live` links to the current ones.
+
 ### Search
 
 The search folder follows Kodi's own PVR search: "New search..." and a

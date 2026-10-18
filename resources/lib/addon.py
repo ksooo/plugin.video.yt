@@ -46,6 +46,13 @@ def region():
     return xbmc.getInfoLabel('System.Locale(iso)')
 
 
+def local_date_time(timestamp):
+    """Return the date and the time of a moment as Kodi's region shows them, without seconds."""
+    moment = time.localtime(timestamp)
+    return (time.strftime(xbmc.getRegion('dateshort'), moment),
+            time.strftime(xbmc.getRegion('time').replace(':%S', ''), moment))
+
+
 def ask_text(heading):
     """Let the user type a text. Returns it stripped, empty if cancelled."""
     return xbmcgui.Dialog().input(heading).strip()

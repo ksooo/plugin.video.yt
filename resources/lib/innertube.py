@@ -28,6 +28,13 @@ FEEDBACK_URL = 'https://www.youtube.com/youtubei/v1/feedback?prettyPrint=false'
 RECOMMENDATIONS = 'FEwhat_to_watch'
 HISTORY = 'FEhistory'
 
+#: YouTube's live channel, and the params of its tabs of the streams live now,
+#: upcoming and recently ended.
+LIVE_CHANNEL = 'UC4R8DWoMoI7CAwX8_LjQHig'
+LIVE_NOW = 'EgdsaXZldGFikgEDCKEK'
+LIVE_UPCOMING = 'EgdsaXZldGFikgEDCKMK'
+LIVE_ENDED = 'EgdsaXZldGFikgEDCKIK'
+
 
 class Client:
     """The identity of one of YouTube's apps."""
@@ -86,6 +93,17 @@ ANDROID_VR = Client(
     'https://www.youtube.com',
     account='vr')
 
+#: The web app, only browsed anonymously: the live channel is empty for the
+#: Quest app.
+WEB = Client(
+    '1',
+    {
+        'clientName': 'WEB',
+        'clientVersion': '2.20261015.01.00',
+    },
+    'Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0',
+    'https://www.youtube.com')
+
 #: Player clients by preference.
 PLAYER_CLIENTS = (ANDROID, ANDROID_VR)
 
@@ -107,12 +125,14 @@ class PlayabilityError(Exception):
     """YouTube refuses to play the video. The message is YouTube's reason, if it gave one.
 
     sign_in_would_help tells whether YouTube asked for a sign-in while a client
-    that accepts one was asked without.
+    that accepts one was asked without. starts_at is when an upcoming live
+    stream starts, in seconds since the epoch, None for any other video.
     """
 
-    def __init__(self, reason, sign_in_would_help=False):
+    def __init__(self, reason, sign_in_would_help=False, starts_at=None):
         super().__init__(reason)
         self.sign_in_would_help = sign_in_would_help
+        self.starts_at = starts_at
 
 
 def get_player(video_id, language, region, access_token):
@@ -125,6 +145,7 @@ def get_player(video_id, language, region, access_token):
     reasons = []
     asked_for_sign_in = False
     signed_out_client = False
+    starts_at = None
     for client in PLAYER_CLIENTS:
         token = access_token(client.account) if client.account else None
         signed_out_client = signed_out_client or (client.account is not None and token is None)
@@ -143,9 +164,10 @@ def get_player(video_id, language, region, access_token):
         status = response.get('playabilityStatus', {})
         reasons.append(status.get('reason', ''))
         asked_for_sign_in = asked_for_sign_in or status.get('status') in _SIGN_IN_STATUSES
+        starts_at = starts_at or _scheduled_start(status)
 
     raise PlayabilityError(next((reason for reason in reasons if reason), ''),
-                           asked_for_sign_in and signed_out_client)
+                           asked_for_sign_in and signed_out_client, starts_at)
 
 
 def get_shelves(browse_id, language, region, access_token):
@@ -208,6 +230,24 @@ def get_signed_in_player(video_id, language, region, access_token):
     return response if _is_playable(response, video_id) else None
 
 
+def get_live_videos(tab, language, region):
+    """Return the ids of the streams on a tab of YouTube's live channel, such as LIVE_NOW.
+
+    Only the first page is fetched.
+    """
+    response = http.post_json(BROWSE_URL, {
+        'context': {'client': _context(WEB, language, region)},
+        'browseId': LIVE_CHANNEL,
+        'params': tab,
+    }, WEB.api_headers)
+
+    video_ids = []
+    for video in _renderers(response.get('contents', {}), 'videoRenderer'):
+        if 'videoId' in video and video['videoId'] not in video_ids:
+            video_ids.append(video['videoId'])
+    return video_ids
+
+
 def new_cpn():
     """Return a new client playback nonce, the id YouTube's apps give each playback."""
     return ''.join(random.choice(_CPN_ALPHABET) for _ in range(16))
@@ -228,6 +268,19 @@ def _browse(browse_id, language, region, access_token):
         sections.extend(tab.get('tabRenderer', {}).get('content', {}).get(
             'sectionListRenderer', {}).get('contents', []))
     return sections
+
+
+def _renderers(node, name):
+    """Yield every renderer of the given name, however deep the web app nests it."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key == name:
+                yield value
+            else:
+                yield from _renderers(value, name)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _renderers(value, name)
 
 
 def _history_videos(language, region, access_token):
@@ -322,6 +375,13 @@ def _request_player(client, video_id, language, region, token, visitor_data=None
         payload['cpn'] = new_cpn()
 
     return http.post_json(PLAYER_URL, payload, headers)
+
+
+def _scheduled_start(status):
+    """Return when an upcoming live stream starts, from its playability status, if given."""
+    start = status.get('liveStreamability', {}).get('liveStreamabilityRenderer', {}).get(
+        'offlineSlate', {}).get('liveStreamOfflineSlateRenderer', {}).get('scheduledStartTime')
+    return int(start) if start else None
 
 
 def _is_playable(response, video_id):

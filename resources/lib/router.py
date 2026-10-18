@@ -24,6 +24,7 @@ from . import addon
 from . import dataapi
 from . import feeds
 from . import http
+from . import innertube
 from . import listing
 from . import playback
 from . import search
@@ -35,6 +36,11 @@ VIDEO_COUNT = 100
 
 #: The most videos listed for a search; a page of 50 costs 101 quota units.
 SEARCH_COUNT = 50
+
+#: The folders below live: tab of YouTube's live channel and label, by name.
+LIVE_TABS = {'now': (innertube.LIVE_NOW, 30601),
+             'upcoming': (innertube.LIVE_UPCOMING, 30602),
+             'ended': (innertube.LIVE_ENDED, 30603)}
 
 
 
@@ -67,6 +73,7 @@ class Router:
             items.append(listing.folder_item(addon.localize(30400), 'recommended'))
         if signed_in or addon.get_string_setting(addon.SETTING_API_KEY):
             items.append(listing.folder_item(addon.localize(30300), 'trending'))
+            items.append(listing.folder_item(addon.localize(30600), 'live'))
             items.append(listing.folder_item(addon.localize(30301), 'search'))
         if signed_in:
             items.append(listing.folder_item(addon.localize(30401), 'history'))
@@ -180,6 +187,22 @@ class Router:
                                                             VIDEO_COUNT, auth=auth),
                           listing.breadcrumb(addon.localize(30300),
                                              self._params.get('title', '')))
+
+    def _list_live(self):
+        """Show the folders of the streams live now, upcoming and recently ended."""
+        listing.finish_folders(self._handle,
+                               [listing.folder_item(addon.localize(label_id), 'live/streams',
+                                                    tab=name)
+                                for name, (_, label_id) in LIVE_TABS.items()],
+                               addon.localize(30600))
+
+    def _list_live_streams(self):
+        """Show the streams of a folder below live, in YouTube's order. Parameter: tab."""
+        tab, label_id = LIVE_TABS.get(self._params.get('tab'), LIVE_TABS['now'])
+        self._list_videos(lambda auth: dataapi.videos(
+            innertube.get_live_videos(tab, addon.language(), addon.region()), auth=auth),
+            listing.breadcrumb(addon.localize(30600), addon.localize(label_id)),
+            nothing_found_label_id=30107)
 
     def _list_search(self):
         """Show the entries to search anew and to search again."""
@@ -350,6 +373,8 @@ _ROUTES = {
     'history': Router._list_history,
     'trending': Router._list_trending,
     'trending/category': Router._list_trending_category,
+    'live': Router._list_live,
+    'live/streams': Router._list_live_streams,
     'search': Router._list_search,
     'search/new': Router._new_search,
     'search/recent': Router._list_recent_searches,

@@ -16,12 +16,14 @@ The top level offers:
 * **Trending**: **All trends**, then YouTube's categories such as music, gaming or sports, each
   with its 100 most popular videos in the region set in Kodi. Categories YouTube keeps no chart
   for in the region are left out.
+* **Live**: the live streams YouTube features now, the upcoming ones and those just ended, about
+  15 each, in the region and language set in Kodi. Upcoming ones play from their start on.
 * **Search**: a new search, and the 20 recent searches to run again or delete. YouTube searches
   by relevance, in the region and language set in Kodi.
 * **History**, when signed in: the videos watched last on YouTube, the latest first - and in Kodi,
   see [Syncing with YouTube](#syncing-with-youtube).
 
-Trending and search work with just the API key, without signing in.
+Trending, live and search work with just the API key, without signing in.
 
 A video's context menu goes to its channel and, when signed in, subscribes to or unsubscribes
 from it. A channel's context menu in the subscriptions unsubscribes from it. Any video plays from

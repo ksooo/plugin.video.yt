@@ -67,6 +67,7 @@ xbmc.executebuiltin = lambda command: BUILTINS.append(command)
 xbmc.ISO_639_1 = 0
 xbmc.getLanguage = lambda format=0, region=False: LANGUAGE[0]
 xbmc.getInfoLabel = lambda label: INFO_LABELS.get(label, '')
+xbmc.getRegion = lambda name: {'dateshort': '%d.%m.%Y', 'time': '%H:%M:%S'}[name]
 
 
 class Monitor:

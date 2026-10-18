@@ -34,7 +34,10 @@ def play(handle, video_id):
                                       account.access_token)
     except innertube.PlayabilityError as error:
         addon.log('{} not playable: {}'.format(video_id, error))
-        if error.sign_in_would_help:
+        if error.starts_at:
+            # YouTube words the start wrongly in some languages, "in 4 Tage" in German.
+            _fail(handle, addon.localize(30108).format(*addon.local_date_time(error.starts_at)))
+        elif error.sign_in_would_help:
             _fail(handle, addon.localize(30102))
         else:
             _fail(handle, str(error) or addon.localize(30100))

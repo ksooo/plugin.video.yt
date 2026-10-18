@@ -151,6 +151,11 @@ msgctxt "#30107"
 msgid "Nothing found."
 msgstr ""
 
+# notification, {0} = date, {1} = time
+msgctxt "#30108"
+msgid "This live stream starts on {0} at {1}."
+msgstr ""
+
 # sign-in dialogue heading, {0} = step, {1} = number of steps
 msgctxt "#30110"
 msgid "Sign in ({0} of {1})"
@@ -299,4 +304,24 @@ msgstr ""
 # video plot, one like
 msgctxt "#30503"
 msgid "{0} like"
+msgstr ""
+
+# main menu
+msgctxt "#30600"
+msgid "Live"
+msgstr ""
+
+# folder below live
+msgctxt "#30601"
+msgid "Live now"
+msgstr ""
+
+# folder below live
+msgctxt "#30602"
+msgid "Upcoming live streams"
+msgstr ""
+
+# folder below live
+msgctxt "#30603"
+msgid "Past live streams"
 msgstr ""

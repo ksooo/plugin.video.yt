@@ -162,6 +162,24 @@ class PlayerTest(unittest.TestCase):
             self.get_player('abc', 'de', 'DE')
         self.assertFalse(context.exception.sign_in_would_help)
 
+    def test_an_upcoming_stream_is_refused_with_its_start(self):
+        upcoming = {'playabilityStatus': {
+            'status': 'LIVE_STREAM_OFFLINE',
+            'reason': 'Diese Live-Veranstaltung beginnt in 4 Tage.',
+            'liveStreamability': {'liveStreamabilityRenderer': {'offlineSlate': {
+                'liveStreamOfflineSlateRenderer': {'scheduledStartTime': '1792688400'}}}}}}
+        self.responses = {'ANDROID': upcoming, 'ANDROID_VR': {'playabilityStatus': {
+            'status': 'LIVE_STREAM_OFFLINE'}}}
+        with self.assertRaises(innertube.PlayabilityError) as context:
+            self.get_player('abc', 'de', 'DE')
+        self.assertEqual(context.exception.starts_at, 1792688400)
+
+    def test_other_refusals_have_no_start(self):
+        self.responses = {'ANDROID': BOT_CHECK, 'ANDROID_VR': BOT_CHECK}
+        with self.assertRaises(innertube.PlayabilityError) as context:
+            self.get_player('abc', 'de', 'DE')
+        self.assertIsNone(context.exception.starts_at)
+
     def test_a_substitute_video_is_a_refusal(self):
         self.responses['ANDROID'] = player_response('other')
         player = self.get_player('abc', 'de', 'DE')
@@ -312,3 +330,35 @@ class RemoveFromHistoryTest(BrowseTestCase):
     def test_a_video_not_in_the_history_is_left_alone(self):
         self.assertFalse(innertube.remove_from_history('v9', 'de', 'DE', 'access-vr'))
         self.assertEqual(len(self.requests), 1)
+
+
+def web_video(video_id):
+    return {'richItemRenderer': {'content': {'videoRenderer': {
+        'videoId': video_id, 'title': {'runs': [{'text': 'Stream ' + video_id}]}}}}}
+
+
+class LiveVideosTest(BrowseTestCase):
+
+    def test_a_tab_of_the_live_channel_is_browsed_anonymously_as_the_web_app(self):
+        innertube.get_live_videos(innertube.LIVE_NOW, 'de', 'DE')
+        url, payload, headers = self.requests[0]
+        self.assertEqual((url, payload['browseId'], payload['params']),
+                         (innertube.BROWSE_URL, innertube.LIVE_CHANNEL, innertube.LIVE_NOW))
+        self.assertEqual(payload['context']['client']['clientName'], 'WEB')
+        self.assertEqual((payload['context']['client']['hl'],
+                          payload['context']['client']['gl']), ('de', 'DE'))
+        self.assertNotIn('Authorization', headers)
+
+    def test_the_streams_come_in_order_and_once_however_deep_they_are(self):
+        self.response = {'contents': {'twoColumnBrowseResultsRenderer': {'tabs': [
+            {'tabRenderer': {'content': {'richGridRenderer': {'contents': [
+                web_video('s2'), web_video('s1'),
+                {'richSectionRenderer': {'content': {'richShelfRenderer': {'contents': [
+                    web_video('s3'), web_video('s1')]}}}},
+                {'continuationItemRenderer': {}}]}}}}]}}}
+        self.assertEqual(innertube.get_live_videos(innertube.LIVE_ENDED, 'de', 'DE'),
+                         ['s2', 's1', 's3'])
+
+    def test_an_unexpected_response_has_no_streams(self):
+        self.response = {'responseContext': {}}
+        self.assertEqual(innertube.get_live_videos(innertube.LIVE_UPCOMING, 'de', 'DE'), [])

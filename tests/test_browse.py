@@ -123,16 +123,18 @@ class RootTest(BrowseTestCase):
 
     def test_everything_is_offered_when_signed_in(self):
         items = self.dispatch()
-        self.assertEqual(self.labels(items), ['L30200', 'L30400', 'L30300', 'L30301', 'L30401'])
+        self.assertEqual(self.labels(items),
+                         ['L30200', 'L30400', 'L30300', 'L30600', 'L30301', 'L30401'])
         self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/subscriptions/',
                                             'plugin://plugin.video.yt/recommended/',
                                             'plugin://plugin.video.yt/trending/',
+                                            'plugin://plugin.video.yt/live/',
                                             'plugin://plugin.video.yt/search/',
                                             'plugin://plugin.video.yt/history/'])
 
-    def test_an_api_key_is_enough_for_trending_and_search(self):
+    def test_an_api_key_is_enough_for_trending_live_and_search(self):
         self.sign_out(api_key='key-1')
-        self.assertEqual(self.labels(self.dispatch()), ['L30300', 'L30301'])
+        self.assertEqual(self.labels(self.dispatch()), ['L30300', 'L30600', 'L30301'])
 
     def test_without_either_nothing_is_offered(self):
         self.sign_out()
@@ -177,6 +179,50 @@ class SubscriptionsTest(BrowseTestCase):
     def test_kodi_does_not_cache_the_listing(self):
         self.dispatch('subscriptions')
         self.assertFalse(support.PLUGIN_STATE['cacheToDisc'])
+
+
+class LiveTest(BrowseTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.live_ids = ['l1', 'l2']
+        self.live_tabs = []
+        patcher = mock.patch.object(innertube, 'get_live_videos', self._get_live_videos)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _get_live_videos(self, tab, language, region):
+        self.live_tabs.append((tab, language, region))
+        return self.live_ids
+
+    def test_live_now_upcoming_and_ended_are_folders(self):
+        items = self.dispatch('live')
+        self.assertEqual(self.labels(items), ['L30601', 'L30602', 'L30603'])
+        self.assertEqual(self.urls(items),
+                         ['plugin://plugin.video.yt/live/streams/?tab=now',
+                          'plugin://plugin.video.yt/live/streams/?tab=upcoming',
+                          'plugin://plugin.video.yt/live/streams/?tab=ended'])
+        self.assertEqual(support.PLUGIN_STATE['category'], 'L30600')
+
+    def test_a_folder_lists_the_streams_of_its_tab_in_kodis_language_and_region(self):
+        support.INFO_LABELS['System.Locale(iso)'] = 'AT'
+        items = self.dispatch('live/streams', '?tab=upcoming')
+        self.assertEqual(self.live_tabs, [(innertube.LIVE_UPCOMING, 'de', 'AT')])
+        self.assertEqual(self.queried('videos'), [(['l1', 'l2'],)])
+        self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/play/?v=dQw4w9WgXcQ'])
+        self.assertEqual(support.PLUGIN_STATE['category'], 'L30600 / L30602')
+
+    def test_an_api_key_is_enough(self):
+        self.sign_out(api_key='key-1')
+        self.dispatch('live/streams', '?tab=now')
+        self.assertEqual(self.queries, [('videos', (['l1', 'l2'],), 'key:key-1')])
+
+    def test_finding_none_is_reported_and_kodi_stays(self):
+        self.live_ids = []
+        self.results['videos'] = []
+        self.dispatch('live/streams', '?tab=ended')
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30107')])
+        self.assertFalse(support.PLUGIN_STATE['succeeded'])
 
 
 class ChannelTest(BrowseTestCase):
