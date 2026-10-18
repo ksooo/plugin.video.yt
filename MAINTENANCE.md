@@ -245,9 +245,9 @@ just waits.
 * A play count of 0 removes it from the history.
 * A resume point removes the video and reports it watched up to there, so
   an earlier one gets through too.
-* A reset resume point removes the video, unless a play count follows
-  within 2 seconds: marking a video watched or unwatched, and playing it to
-  the end, reset its resume point first.
+* A reset resume point removes the video, unless its play count changes
+  within 2 seconds before or after: marking a video watched or unwatched,
+  and playing it to the end, change both, in either order.
 
 Kodi lists a folder anew right after changing a video in it, before the
 history has the change, so the service refreshes a folder of the add-on

@@ -86,6 +86,22 @@ class ServiceTest(AddonTestCase):
         self.later(service.PLAY_COUNT_WAIT_SECONDS)
         self.assertEqual(self.changes, [('report', '0.000', '200.000', 'stopped')])
 
+    def test_playing_to_the_end_resets_the_resume_point_after_the_play_count(self):
+        self.play_count(1)
+        self.resume_point(0)
+        self.later(service.PLAY_COUNT_WAIT_SECONDS)
+        self.assertEqual(self.changes, [('report', '0.000', '200.000', 'stopped')])
+
+    def test_a_reset_long_after_a_play_count_stands_on_its_own(self):
+        with mock.patch.object(service.time, 'monotonic', return_value=1000.0):
+            self.play_count(1)
+        with mock.patch.object(service.time, 'monotonic',
+                               return_value=1000.0 + service.PLAY_COUNT_WAIT_SECONDS):
+            self.resume_point(0)
+        self.service.handle_resets(1000.0 + 2 * service.PLAY_COUNT_WAIT_SECONDS)
+        self.assertEqual(self.changes, [('report', '0.000', '200.000', 'stopped'),
+                                        ('remove', 'abc')])
+
     def test_a_video_marked_unwatched_is_removed_from_the_history_once(self):
         self.resume_point(0)
         self.play_count(0)

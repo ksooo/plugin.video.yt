@@ -18,6 +18,7 @@ through after removing the video from the history.
 """
 
 import json
+import math
 import time
 from urllib.parse import parse_qsl
 from urllib.parse import urlsplit
@@ -35,9 +36,9 @@ from . import watchtime
 PLAY_COUNT_CHANGED = 'Files.OnPlayCountChanged'
 RESUME_POINT_CHANGED = 'Files.OnResumePointChanged'
 
-#: Marking a video watched or unwatched, and playing it to the end, reset its
-#: resume point just before changing its play count. A reset without a play
-#: count following within this time stands on its own.
+#: Marking a video watched or unwatched, and playing it to the end, change its
+#: play count and reset its resume point, in either order. A reset without a
+#: play count change within this time before or after it stands on its own.
 PLAY_COUNT_WAIT_SECONDS = 2
 
 
@@ -48,6 +49,8 @@ class Service(xbmc.Monitor):
         super().__init__()
         #: Video ids whose resume point was reset, with the time it was.
         self._resets = {}
+        #: Video ids whose play count changed, with the time it did.
+        self._play_counts = {}
 
     def run(self):
         while not self.waitForAbort(1):
@@ -61,19 +64,24 @@ class Service(xbmc.Monitor):
         if video_id is None:
             return
 
+        now = time.monotonic()
         if method == PLAY_COUNT_CHANGED:
             self._resets.pop(video_id, None)
+            self._play_counts[video_id] = now
             if data['playcount'] > 0:
                 _sync(_report, video_id, None)
             else:
                 _sync(_remove, video_id)
         elif data['resume']['position'] > 0:
             _sync(_replace, video_id, data['resume']['position'])
-        else:
-            self._resets[video_id] = time.monotonic()
+        elif now - self._play_counts.get(video_id, -math.inf) >= PLAY_COUNT_WAIT_SECONDS:
+            self._resets[video_id] = now
 
     def handle_resets(self, now):
         """Remove the videos whose resume point was reset on its own from the history."""
+        for video_id, changed_at in list(self._play_counts.items()):
+            if now - changed_at >= PLAY_COUNT_WAIT_SECONDS:
+                del self._play_counts[video_id]
         for video_id, reset_at in list(self._resets.items()):
             if now - reset_at >= PLAY_COUNT_WAIT_SECONDS:
                 del self._resets[video_id]
