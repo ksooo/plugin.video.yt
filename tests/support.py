@@ -27,6 +27,8 @@ BUILTINS = []
 CONFIRMATIONS = []
 CONFIRM_ANSWER = [True]
 INPUT_ANSWER = ['']
+CONTEXT_MENUS = []
+CONTEXT_MENU_ANSWER = [-1]
 PLUGIN_ITEMS = []
 PLUGIN_STATE = {}
 INFO_LABELS = {}
@@ -218,6 +220,10 @@ class Dialog:
     def input(self, heading, defaultt='', type=0, option=0, autoclose=0):
         return INPUT_ANSWER[0]
 
+    def contextmenu(self, options):
+        CONTEXT_MENUS.append(options)
+        return CONTEXT_MENU_ANSWER[0]
+
 
 class DialogProgress:
     def create(self, heading, message=''):
@@ -278,6 +284,7 @@ xbmcplugin.addSortMethod = _add_sort_method
 
 def reset_output():
     del LOG[:], NOTIFICATIONS[:], PLUGIN_ITEMS[:], BUILTINS[:], CONFIRMATIONS[:]
+    del CONTEXT_MENUS[:]
     PLUGIN_STATE.clear()
 
 
@@ -289,6 +296,7 @@ def reset():
     ABORT_REQUESTED[0] = False
     CONFIRM_ANSWER[0] = True
     INPUT_ANSWER[0] = ''
+    CONTEXT_MENU_ANSWER[0] = -1
     SETTINGS.clear()
     SETTINGS.update(DEFAULT_SETTINGS)
     del PROGRESS[:]

@@ -145,6 +145,11 @@ def notify(message, heading=None, time=5000):
     xbmcgui.Dialog().notification(heading or ADDON_NAME, message, ADDON_ICON, time)
 
 
+def context_menu(options):
+    """Show a context menu of the options. Returns the index chosen, -1 if cancelled."""
+    return xbmcgui.Dialog().contextmenu(options)
+
+
 def confirm(message):
     """Ask a yes/no question and return whether the answer was yes."""
     return xbmcgui.Dialog().yesno(ADDON_NAME, message)

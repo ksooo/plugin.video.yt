@@ -334,6 +334,21 @@ class Router:
             # The context menus of the listing have to follow.
             xbmc.executebuiltin('Container.Refresh')
 
+    def _channel_menu(self):
+        """Offer going to a channel and subscribing to it or unsubscribing, run from a context
+        menu. Parameters: channel, title, subscribed."""
+        subscribed = self._params.get('subscribed') == '1'
+        choice = addon.context_menu([addon.localize(30207),
+                                     addon.localize(30203 if subscribed else 30208)])
+        if choice == 0:
+            xbmc.executebuiltin('Container.Update({})'.format(listing.url(
+                'channel', id=self._params.get('channel', ''),
+                title=self._params.get('title', ''))))
+        elif choice == 1 and subscribed:
+            self._unsubscribe()
+        elif choice == 1:
+            self._subscribe()
+
     def _change_subscription(self, change, done_label_id):
         """Apply the change and report it. Returns whether it succeeded."""
         channel_id = self._params.get('channel', '')
@@ -410,6 +425,7 @@ _ROUTES = {
     'subscriptions': Router._list_subscriptions,
     'subscriptions/latest': Router._list_latest,
     'channel': Router._list_channel,
+    'channel/menu': Router._channel_menu,
     'recommended': Router._list_recommendations,
     'recommended/shelf': Router._list_recommendation_shelf,
     'history': Router._list_history,

@@ -28,8 +28,9 @@ The top level offers:
 Trending, live and search work with just the API key, without signing in.
 
 A video's context menu goes to its channel and, when signed in, subscribes to or unsubscribes
-from it and likes the video or takes the like back. A channel's context menu in the subscriptions
-unsubscribes from it. Any video plays from `plugin://plugin.video.yt/play/?v=<video id>`.
+from it - both in a submenu named after the channel - and likes the video or takes the like back.
+A channel's context menu in the subscriptions unsubscribes from it. Any video plays from
+`plugin://plugin.video.yt/play/?v=<video id>`.
 
 A video's plot starts with its channel and its numbers of views and likes, as far as YouTube shows
 them.

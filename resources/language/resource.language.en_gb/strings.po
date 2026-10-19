@@ -241,24 +241,34 @@ msgctxt "#30201"
 msgid "Subscribe to channel {0}"
 msgstr ""
 
-# context menu of a video, {0} = channel
-msgctxt "#30202"
-msgid "Unsubscribe from channel {0}"
-msgstr ""
-
-# context menu of a channel
+# context menu of a channel and of the videos in its listing, also a channel's submenu
 msgctxt "#30203"
 msgid "Unsubscribe"
 msgstr ""
 
 # context menu of a video, {0} = channel
 msgctxt "#30204"
-msgid "Go to channel {0}"
+msgid "Visit channel {0}"
 msgstr ""
 
 # first folder below subscriptions, above the channels
 msgctxt "#30205"
 msgid "All subscriptions"
+msgstr ""
+
+# context menu of a video, opens a submenu, {0} = channel
+msgctxt "#30206"
+msgid "Channel {0}…"
+msgstr ""
+
+# submenu of a channel in the context menu of a video
+msgctxt "#30207"
+msgid "Visit"
+msgstr ""
+
+# submenu of a channel in the context menu of a video
+msgctxt "#30208"
+msgid "Subscribe"
 msgstr ""
 
 # notification, {0} = channel

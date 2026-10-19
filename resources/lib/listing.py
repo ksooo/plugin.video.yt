@@ -121,12 +121,17 @@ def video_item(video, subscribed, liked, link_channel, percent_watched=None):
     and resume point Kodi keeps; None leaves those to Kodi.
     """
     context_menu = []
-    if link_channel:
+    if link_channel and subscribed is not None:
+        context_menu.append((addon.localize(30206).format(video.channel_title),
+                             'RunPlugin({})'.format(url('channel/menu', channel=video.channel_id,
+                                                        title=video.channel_title,
+                                                        subscribed=int(subscribed)))))
+    elif link_channel:
         context_menu.append((addon.localize(30204).format(video.channel_title),
                              'Container.Update({})'.format(url('channel', id=video.channel_id,
                                                                title=video.channel_title))))
-    if subscribed:
-        context_menu.append(_unsubscribe_entry(30202, video.channel_id, video.channel_title))
+    elif subscribed:
+        context_menu.append(_unsubscribe_entry(30203, video.channel_id, video.channel_title))
     elif subscribed is not None:
         context_menu.append((addon.localize(30201).format(video.channel_title),
                              'RunPlugin({})'.format(url('subscribe', channel=video.channel_id,

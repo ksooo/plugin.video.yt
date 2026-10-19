@@ -226,7 +226,7 @@ class LatestTest(BrowseTestCase):
 
     def test_they_lead_to_their_channel(self):
         list_item = self.dispatch('subscriptions/latest')[0][1]
-        self.assertEqual(list_item.context_menu[0][0], 'L30204')
+        self.assertEqual(list_item.context_menu[0][0], 'L30206')
 
     def test_without_sign_in_the_user_is_told(self):
         self.sign_out(api_key='key-1')
@@ -353,7 +353,7 @@ class ChannelTest(BrowseTestCase):
         self.cache_channels({'UC1': 'sub-UC1'})
         list_item = self.channel()[0][1]
         self.assertEqual(list_item.context_menu, [(
-            'L30202',
+            'L30203',
             'RunPlugin(plugin://plugin.video.yt/unsubscribe/?channel=UC1&title=Alpha+%26+Omega)'),
             LIKE])
 
@@ -410,16 +410,18 @@ class TrendingTest(BrowseTestCase):
     def test_videos_lead_to_their_channel_and_know_the_subscription(self):
         self.cache_channels({'UC1': 'sub-UC1'})
         list_item = self.category()[0][1]
-        self.assertEqual([entry[0] for entry in list_item.context_menu],
-                         ['L30204', 'L30202', 'L30700'])
-        self.assertEqual(list_item.context_menu[0], GO_TO_CHANNEL)
+        self.assertEqual([entry[0] for entry in list_item.context_menu], ['L30206', 'L30700'])
+        self.assertEqual(list_item.context_menu[0], (
+            'L30206', 'RunPlugin(plugin://plugin.video.yt/channel/menu/'
+                      '?channel=UC1&subscribed=1&title=Alpha+%26+Omega)'))
 
-    def test_the_entries_name_the_channel(self):
+    def test_the_channel_submenu_is_named_after_the_channel(self):
         self.cache_channels({})
         with mock.patch.object(addon, 'localize', lambda string_id: 'L{} {{0}}'.format(string_id)):
             list_item = self.category()[0][1]
-        self.assertEqual([entry[0] for entry in list_item.context_menu[:2]],
-                         ['L30204 Alpha & Omega', 'L30201 Alpha & Omega'])
+        self.assertEqual(list_item.context_menu[0], (
+            'L30206 Alpha & Omega', 'RunPlugin(plugin://plugin.video.yt/channel/menu/'
+                                    '?channel=UC1&subscribed=0&title=Alpha+%26+Omega)'))
 
     def test_without_sign_in_the_api_key_is_used_and_nobody_subscribes(self):
         self.sign_out(api_key='key-1')
@@ -678,6 +680,45 @@ class SearchTest(BrowseTestCase):
         self.assertEqual(self.labels(items), ['second', 'first'])
         self.assertEqual(self.urls(items)[0], 'plugin://plugin.video.yt/search/results/?q=second')
         self.assertFalse(support.PLUGIN_STATE['cacheToDisc'])
+
+
+class ChannelMenuTest(BrowseTestCase):
+
+    def choose(self, subscribed, answer):
+        support.reset_output()
+        support.CONTEXT_MENU_ANSWER[0] = answer
+        Router([support.BASE_URL + 'channel/menu/', '-1',
+                '?channel=UC9&title=Gamma&subscribed={}'.format(subscribed)]).dispatch()
+
+    def test_a_subscribed_channel_offers_visiting_and_unsubscribing(self):
+        self.choose(1, -1)
+        self.assertEqual(support.CONTEXT_MENUS, [['L30207', 'L30203']])
+
+    def test_another_channel_offers_visiting_and_subscribing(self):
+        self.choose(0, -1)
+        self.assertEqual(support.CONTEXT_MENUS, [['L30207', 'L30208']])
+
+    def test_visiting_goes_to_the_channel(self):
+        self.choose(1, 0)
+        self.assertEqual(support.BUILTINS,
+                         ['Container.Update(plugin://plugin.video.yt/channel/?id=UC9&title=Gamma)'])
+
+    def test_unsubscribing_asks_and_ends_the_subscription(self):
+        self.cache_channels({'UC9': 'sub-UC9'})
+        self.choose(1, 1)
+        self.assertEqual(support.CONFIRMATIONS, [('YouTube', 'L30212')])
+        self.assertEqual(self.queried('unsubscribe'), [('sub-UC9',)])
+
+    def test_subscribing_subscribes(self):
+        self.cache_channels({})
+        self.choose(0, 1)
+        self.assertEqual(self.queried('subscribe'), [('UC9',)])
+
+    def test_cancelling_changes_nothing(self):
+        self.cache_channels({'UC9': 'sub-UC9'})
+        self.choose(1, -1)
+        self.assertEqual((support.BUILTINS, support.CONFIRMATIONS, self.queried('unsubscribe')),
+                         ([], [], []))
 
 
 class SubscriptionChangeTest(BrowseTestCase):

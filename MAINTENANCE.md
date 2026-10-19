@@ -110,6 +110,12 @@ unsubscribing within the channel's own listing: that one is left for the
 level above, which Kodi must not cache (`cacheToDisc=False`), so the channel
 is gone there.
 
+Where a video offers both going to its channel and changing the
+subscription, the two share a submenu named after the channel. Kodi's
+`ListItem.addContextMenuItems` takes no submenus, and those of
+`kodi.context.item` cannot name the channel, so the entry runs the route
+`channel/menu`, which shows the submenu with `Dialog().contextmenu`.
+
 ### Likes in context menus
 
 Every video offers to like it or to take the like back, so a video listing
