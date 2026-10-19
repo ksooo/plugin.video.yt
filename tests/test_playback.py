@@ -151,7 +151,7 @@ class VideoTest(PlaybackTestCase):
         self.assertEqual(self.audio_names(), ['Opus', 'L30037'])
 
     def test_the_setting_leaves_automatic_dubs_out(self):
-        support.SETTINGS['skip_auto_dubs'] = True
+        support.SETTINGS['offer_auto_dubs'] = False
         self.response = player_response('abc', formats=(VP9_1080, AUTO_DUB_DE, ORIGINAL_EN))
         self.play()
         self.assertEqual(self.audio_names(), ['Opus'])

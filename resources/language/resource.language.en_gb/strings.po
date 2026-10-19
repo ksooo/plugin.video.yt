@@ -26,6 +26,21 @@ msgctxt "#30002"
 msgid "Playback"
 msgstr ""
 
+# settings group
+msgctxt "#30003"
+msgid "General"
+msgstr ""
+
+# settings group
+msgctxt "#30004"
+msgid "Video"
+msgstr ""
+
+# settings group
+msgctxt "#30005"
+msgid "Audio"
+msgstr ""
+
 # settings label
 msgctxt "#30010"
 msgid "API key"
@@ -113,12 +128,12 @@ msgstr ""
 
 # settings label
 msgctxt "#30035"
-msgid "Leave out automatic dubs"
+msgid "Offer automatically dubbed audio tracks"
 msgstr ""
 
 # settings help
 msgctxt "#30036"
-msgid "Audio tracks YouTube dubbed automatically are not offered. Dubs made by people stay."
+msgid "Also offer the audio tracks YouTube dubbed automatically. Kodi's audio stream dialogue marks them as such."
 msgstr ""
 
 # name of an audio track in Kodi's audio stream dialogue

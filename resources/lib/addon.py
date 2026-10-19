@@ -28,7 +28,7 @@ SETTING_CLIENT_ID = 'client_id'
 SETTING_CLIENT_SECRET = 'client_secret'
 SETTING_SIGNED_IN = 'signed_in'
 SETTING_VIDEO_CODECS = 'video_codecs'
-SETTING_SKIP_AUTO_DUBS = 'skip_auto_dubs'
+SETTING_OFFER_AUTO_DUBS = 'offer_auto_dubs'
 SETTING_SYNC_PLAYBACK = 'sync_playback'
 
 

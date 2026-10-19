@@ -40,7 +40,7 @@ DEFAULT_SETTINGS = {
     'client_secret': '',
     'signed_in': False,
     'video_codecs': ['vp9', 'avc1'],
-    'skip_auto_dubs': False,
+    'offer_auto_dubs': True,
     'sync_playback': False,
 }
 SETTINGS = dict(DEFAULT_SETTINGS)

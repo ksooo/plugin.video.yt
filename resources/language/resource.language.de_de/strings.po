@@ -26,6 +26,21 @@ msgctxt "#30002"
 msgid "Playback"
 msgstr "Wiedergabe"
 
+# settings group
+msgctxt "#30003"
+msgid "General"
+msgstr "Allgemein"
+
+# settings group
+msgctxt "#30004"
+msgid "Video"
+msgstr "Video"
+
+# settings group
+msgctxt "#30005"
+msgid "Audio"
+msgstr "Audio"
+
 # settings label
 msgctxt "#30010"
 msgid "API key"
@@ -113,13 +128,13 @@ msgstr "H.264"
 
 # settings label
 msgctxt "#30035"
-msgid "Leave out automatic dubs"
-msgstr "Automatische Synchronisationen weglassen"
+msgid "Offer automatically dubbed audio tracks"
+msgstr "Automatisch synchronisierte Tonspuren anbieten"
 
 # settings help
 msgctxt "#30036"
-msgid "Audio tracks YouTube dubbed automatically are not offered. Dubs made by people stay."
-msgstr "Von YouTube automatisch synchronisierte Tonspuren werden nicht angeboten. Von Menschen synchronisierte bleiben erhalten."
+msgid "Also offer the audio tracks YouTube dubbed automatically. Kodi's audio stream dialogue marks them as such."
+msgstr "Auch die von YouTube automatisch synchronisierten Tonspuren anbieten. Im Tonspur-Dialog von Kodi sind sie als solche gekennzeichnet."
 
 # name of an audio track in Kodi's audio stream dialogue
 msgctxt "#30037"
