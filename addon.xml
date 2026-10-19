@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="plugin.video.yt"
        name="YouTube"
-       version="1.1.1"
+       version="1.2.0"
        provider-name="Kai Sommerfeld">
   <requires>
     <import addon="xbmc.python" version="3.0.1"/>
@@ -21,9 +21,14 @@
     <platform>all</platform>
     <license>GPL-2.0-or-later</license>
     <source>https://github.com/ksooo/plugin.video.yt</source>
-    <news>v1.1.1
-- With Kodi 23, a video marked unwatched or whose resume point was reset now leaves the History folder right away
-- With Kodi 23, a video watched to the end in Kodi now stays in your YouTube watch history</news>
+    <news>v1.2.0
+- Where Kodi adjusts the display's refresh rate to a video, it now does so before playback starts instead of a few seconds into it
+- Audio tracks YouTube dubbed automatically are named so in the audio stream dialogue; a new setting stops offering them
+- The original audio track of a video YouTube dubbed automatically is now recognised as such
+- In a video's context menu, visiting its channel and subscribing or unsubscribing now share a submenu named after the channel
+- The playback settings are grouped into general, video and audio
+- "All subscriptions" no longer comes up empty at times
+- When the daily YouTube quota is used up, the message now tells when it is available again</news>
     <assets>
       <icon>resources/icon.png</icon>
     </assets>
