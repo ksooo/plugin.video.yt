@@ -41,6 +41,11 @@ RESUME_POINT_CHANGED = 'Files.OnResumePointChanged'
 #: play count change within this time before or after it stands on its own.
 PLAY_COUNT_WAIT_SECONDS = 2
 
+#: Kodi drops the resume point when playback stops within the first minutes
+#: of a video. A reset while the add-on plays the video, or this soon after,
+#: comes from that; the history keeps the position reported while playing.
+PLAYBACK_END_SECONDS = 5
+
 
 class Service(xbmc.Monitor):
     """Waits for Kodi's announcements until Kodi shuts down."""
@@ -77,7 +82,8 @@ class Service(xbmc.Monitor):
                 self._sync(_remove, video_id)
         elif data['resume']['position'] > 0:
             self._sync(_replace, video_id, data['resume']['position'])
-        elif now - self._play_counts.get(video_id, -math.inf) >= PLAY_COUNT_WAIT_SECONDS:
+        elif (now - self._play_counts.get(video_id, -math.inf) >= PLAY_COUNT_WAIT_SECONDS
+              and not feeds.played_lately(video_id, PLAYBACK_END_SECONDS)):
             self._resets[video_id] = now
 
     def handle_resets(self, now):

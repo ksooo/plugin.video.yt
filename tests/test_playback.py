@@ -374,6 +374,21 @@ class SyncTest(PlaybackTestCase):
         self.assertEqual(len(self.reports), 3)
         self.assertEqual(len(self.errors()), 3)
 
+    def test_the_service_learns_that_the_video_plays_and_when_it_stopped(self):
+        follow = watchtime.follow
+        playing = []
+
+        def following(url, tracking):
+            playing.append(feeds.played_lately('abc', 0))
+            return follow(url, tracking)
+
+        self.watch(5)
+        with mock.patch.object(watchtime, 'follow', following):
+            self.play()
+        self.assertEqual(playing, [True])
+        self.assertEqual((feeds.played_lately('abc', 0), feeds.played_lately('abc', 60)),
+                         (False, True))
+
     def test_where_playback_stopped_shows_in_the_listings_at_once(self):
         addon.save_json(addon.temp_path(feeds.PROGRESS_FILE),
                         {'saved_at': time.time(), 'progress': {}})

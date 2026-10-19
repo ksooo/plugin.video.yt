@@ -22,6 +22,9 @@ PROGRESS_MAX_AGE_SECONDS as well, since every video listing needs it.
 YouTube still delivers a video just removed from the history for a while, so
 such a video is left out of the history and its progress for
 REMOVED_MAX_AGE_SECONDS, unless it is watched again.
+
+The video Kodi plays, or played last, is noted for the service, which runs
+apart from the playback.
 """
 
 import time
@@ -37,6 +40,8 @@ PROGRESS_MAX_AGE_SECONDS = 5 * 60
 
 REMOVED_FILE = 'removed-from-history.json'
 REMOVED_MAX_AGE_SECONDS = 5 * 60
+
+PLAYBACK_FILE = 'playback.json'
 
 
 def recommendation_shelves(access_token):
@@ -109,6 +114,25 @@ def removed(video_id):
     cache = addon.load_json(path, None)
     if cache is not None and cache['progress'].pop(video_id, None) is not None:
         addon.save_json(path, cache)
+
+
+def playback_started(video_id):
+    """Note that Kodi plays the video, until playback_ended()."""
+    addon.save_json(addon.temp_path(PLAYBACK_FILE), {'video_id': video_id, 'ended_at': None})
+
+
+def playback_ended(video_id):
+    """Note that Kodi stopped playing the video."""
+    addon.save_json(addon.temp_path(PLAYBACK_FILE),
+                    {'video_id': video_id, 'ended_at': time.time()})
+
+
+def played_lately(video_id, seconds):
+    """Return whether Kodi plays the video, or stopped playing it within the seconds."""
+    playback = addon.load_json(addon.temp_path(PLAYBACK_FILE), {})
+    if playback.get('video_id') != video_id:
+        return False
+    return playback['ended_at'] is None or time.time() - playback['ended_at'] < seconds
 
 
 def _recently_removed():

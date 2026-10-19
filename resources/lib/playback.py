@@ -117,7 +117,9 @@ def _sync(player, video_id, url):
         addon.log('{} cannot be reported to the watch history'.format(video_id))
         return
 
+    feeds.playback_started(video_id)
     position = watchtime.follow(url, tracking)
+    feeds.playback_ended(video_id)
     length = int(player.response['videoDetails'].get('lengthSeconds', 0))
     if position is not None and length:
         feeds.watched(video_id, min(100, round(position * 100 / length)))

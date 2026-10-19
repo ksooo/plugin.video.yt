@@ -115,6 +115,38 @@ class ServiceTest(AddonTestCase):
         self.later(service.PLAY_COUNT_WAIT_SECONDS)
         self.assertEqual(self.changes, [('remove', 'abc')])
 
+    def test_a_reset_while_the_video_plays_keeps_it_in_the_history(self):
+        feeds.playback_started('abc')
+        self.resume_point(0)
+        self.later(service.PLAY_COUNT_WAIT_SECONDS)
+        self.assertEqual(self.changes, [])
+
+    def test_a_reset_just_after_the_video_stopped_keeps_it_in_the_history(self):
+        with mock.patch.object(feeds.time, 'time', return_value=1000000):
+            feeds.playback_started('abc')
+            feeds.playback_ended('abc')
+        with mock.patch.object(feeds.time, 'time',
+                               return_value=1000000 + service.PLAYBACK_END_SECONDS - 1):
+            self.resume_point(0)
+        self.later(service.PLAY_COUNT_WAIT_SECONDS)
+        self.assertEqual(self.changes, [])
+
+    def test_a_reset_a_while_after_the_video_stopped_stands_on_its_own(self):
+        with mock.patch.object(feeds.time, 'time', return_value=1000000):
+            feeds.playback_started('abc')
+            feeds.playback_ended('abc')
+        with mock.patch.object(feeds.time, 'time',
+                               return_value=1000000 + service.PLAYBACK_END_SECONDS):
+            self.resume_point(0)
+        self.later(service.PLAY_COUNT_WAIT_SECONDS)
+        self.assertEqual(self.changes, [('remove', 'abc')])
+
+    def test_a_reset_while_another_video_plays_stands_on_its_own(self):
+        feeds.playback_started('xyz')
+        self.resume_point(0)
+        self.later(service.PLAY_COUNT_WAIT_SECONDS)
+        self.assertEqual(self.changes, [('remove', 'abc')])
+
     def test_a_resume_point_replaces_the_one_youtube_has(self):
         self.resume_point(50.0)
         self.assertEqual(self.changes, [('remove', 'abc'),

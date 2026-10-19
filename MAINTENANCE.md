@@ -255,6 +255,11 @@ just waits.
 * A reset resume point removes the video, unless its play count changes
   within 2 seconds before or after: marking a video watched or unwatched,
   and playing it to the end, change both, in either order.
+* Nor does a reset while the add-on plays the video, or within 5 seconds
+  after it stopped: Kodi drops the resume point when playback stops within
+  the first 3 minutes (`ignoresecondsatstart`), while the history has the
+  position reported. The plugin call notes in `feeds.py` which video plays
+  and when it stopped.
 
 Kodi lists a folder anew right after changing a video in it, before the
 history has the change, so the service lists a folder of the add-on anew
