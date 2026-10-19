@@ -17,6 +17,7 @@ import xbmcplugin
 from . import account
 from . import addon
 from . import feeds
+from . import framerates
 from . import http
 from . import innertube
 from . import manifest
@@ -55,8 +56,9 @@ def play(handle, video_id):
     else:
         captions = player.response.get('captions', {}).get(
             'playerCaptionsTracklistRenderer', {}).get('captionTracks', [])
-        url = _play_video(handle, video_id, streaming_data.get('adaptiveFormats', []),
-                          captions, headers)
+        formats = streaming_data.get('adaptiveFormats', [])
+        url = _play_video(handle, video_id, formats, captions, headers,
+                          framerates.of_formats(formats, player.client.stream_headers))
         if url is not None:
             _sync(player, video_id, url)
 
@@ -71,13 +73,14 @@ def _play_live(handle, hls_url, headers):
     xbmcplugin.setResolvedUrl(handle, True, list_item)
 
 
-def _play_video(handle, video_id, formats, captions, headers):
+def _play_video(handle, video_id, formats, captions, headers, frame_rates):
     """Hand the video to Kodi. Returns the URL Kodi plays it from, None if that failed."""
     mpd = manifest.build(formats, captions,
                          addon.get_string_list_setting(addon.SETTING_VIDEO_CODECS),
                          prefer_hdr=bool(xbmc.getInfoLabel('System.SupportedHDRTypes')),
                          auto_dub_name=(None if addon.get_bool_setting(addon.SETTING_SKIP_AUTO_DUBS)
-                                        else addon.localize(30037)))
+                                        else addon.localize(30037)),
+                         frame_rates=frame_rates)
     if mpd is None:
         addon.log('{} has no usable formats'.format(video_id))
         _fail(handle, addon.localize(30100))

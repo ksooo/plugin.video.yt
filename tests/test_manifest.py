@@ -30,8 +30,9 @@ ALL_VIDEO_CODECS = ('av1', 'vp9', 'avc1')
 
 
 def build(formats, video_codecs=('vp9', 'avc1'), prefer_hdr=False, captions=(),
-          auto_dub_name='Automatic dub'):
-    mpd = manifest.build(formats, list(captions), video_codecs, prefer_hdr, auto_dub_name)
+          auto_dub_name='Automatic dub', frame_rates=None):
+    mpd = manifest.build(formats, list(captions), video_codecs, prefer_hdr, auto_dub_name,
+                         frame_rates or {})
     return None if mpd is None else ElementTree.fromstring(mpd)
 
 
@@ -221,6 +222,13 @@ class AudioTest(unittest.TestCase):
                          ['true', None])
         config = audio[1].find('.//dash:AudioChannelConfiguration', NS)
         self.assertEqual(config.get('value'), '6')
+
+    def test_video_representations_carry_the_frame_rate_of_their_fps(self):
+        video = adaptation_sets(build([dict(VP9_1080, fps=60), dict(VP9_720, fps=30), OPUS],
+                                      frame_rates={60: '60', 30: '30000/1001'}), 'video')[0]
+        self.assertEqual([representation.get('frameRate')
+                          for representation in video.iterfind('dash:Representation', NS)],
+                         ['30000/1001', '60'])
 
     def test_a_video_with_a_single_track_has_it_as_original(self):
         audio = adaptation_sets(build([VP9_1080, OPUS]), 'audio')[0]

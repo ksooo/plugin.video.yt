@@ -47,7 +47,9 @@ display allow. Kodi's own dialogues switch between:
   **Playback ▸ Leave out automatic dubs** drops them.
 * **Subtitles**: the subtitles made for the video, and those YouTube recognized from the speech.
 
-Kodi remembers where you stopped and which videos you watched, as for any other video.
+Kodi learns each video's exact frame rate up front, so where it adjusts the display's refresh rate,
+it does so before playback starts. Kodi remembers where you stopped and which videos you watched,
+as for any other video.
 
 ## Syncing with YouTube
 

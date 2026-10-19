@@ -69,13 +69,14 @@ _ROLE_DESCRIPTION = '2'
 _MIME_TYPE = re.compile(r'^(?P<mime>[\w-]+/[\w.+-]+);\s*codecs="(?P<codecs>[^"]+)"$')
 
 
-def build(formats, captions, video_codecs, prefer_hdr, auto_dub_name):
+def build(formats, captions, video_codecs, prefer_hdr, auto_dub_name, frame_rates):
     """Return the MPD for the adaptive formats, or None without video or audio.
 
     captions are the captionTracks of the player response. video_codecs is the
     collection of video codec families allowed, prefer_hdr makes an HDR
     AdaptationSet the default one when there is one. auto_dub_name names the
     audio tracks YouTube dubbed automatically; None leaves them out.
+    frame_rates maps the fps of the video formats to their DASH frameRate.
     """
     video_sets = {}
     audio_sets = {}
@@ -118,7 +119,7 @@ def build(formats, captions, video_codecs, prefer_hdr, auto_dub_name):
     period = ElementTree.SubElement(mpd, 'Period')
 
     for index, key in enumerate(sorted(video_sets, key=video_rank)):
-        _add_video_set(period, index, key, video_sets[key], index == 0)
+        _add_video_set(period, index, key, video_sets[key], index == 0, frame_rates)
 
     for index, key in enumerate(sorted(audio_sets, key=audio_rank), start=len(video_sets)):
         _add_audio_set(period, index, key, audio_sets[key], index == len(video_sets),
@@ -188,7 +189,7 @@ def _duration_seconds(formats):
     return max(int(data.get('approxDurationMs', 0)) for data in formats) / 1000
 
 
-def _add_video_set(period, index, key, formats, is_default):
+def _add_video_set(period, index, key, formats, is_default, frame_rates):
     mime, family, transfer = key
     name = _CODEC_NAMES[family] if transfer is None else '{} {}'.format(_CODEC_NAMES[family],
                                                                         transfer[1])
@@ -203,6 +204,8 @@ def _add_video_set(period, index, key, formats, is_default):
         representation = _add_representation(adaptation_set, data)
         representation.set('width', str(data['width']))
         representation.set('height', str(data['height']))
+        if data.get('fps') in frame_rates:
+            representation.set('frameRate', frame_rates[data['fps']])
         _add_segment_base(representation, data)
 
 

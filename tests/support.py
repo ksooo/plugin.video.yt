@@ -410,3 +410,7 @@ class AddonTestCase(unittest.TestCase):
     @staticmethod
     def errors():
         return [message for level, message in LOG if level == xbmc.LOGERROR]
+
+    @staticmethod
+    def warnings():
+        return [message for level, message in LOG if level == xbmc.LOGWARNING]

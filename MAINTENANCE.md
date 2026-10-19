@@ -283,6 +283,12 @@ further up, where it would append a slash.
 The video codecs offered come from the setting `video_codecs`; the order of
 preference among them is fixed in `manifest.VIDEO_CODEC_ORDER`.
 
+Every video Representation gets a `frameRate`, so that Kodi can switch the
+display's refresh rate before playback instead of a few seconds into it.
+YouTube's `fps` is a whole number, 24 for 23.976 as well; `framerates.py`
+reads the exact rate from the WebM header of a VP9 format, one request of a
+few hundred bytes per fps, and assumes the NTSC rates otherwise.
+
 Each audio track gets AdaptationSets of its own. The original one is the
 track whose URL carries `xtags=acont=original:...`. `audioIsDefault` marks
 the track YouTube picks for the language asked for, which for a video

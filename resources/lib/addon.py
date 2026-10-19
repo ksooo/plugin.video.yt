@@ -130,6 +130,11 @@ def log(message, level=xbmc.LOGDEBUG):
     xbmc.log('[{}] {}'.format(ADDON_ID, message), level)
 
 
+def log_warning(message):
+    """Write a warning to the Kodi log."""
+    log(message, xbmc.LOGWARNING)
+
+
 def log_error(message):
     """Write an error message to the Kodi log."""
     log(message, xbmc.LOGERROR)

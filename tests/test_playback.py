@@ -28,6 +28,7 @@ from tests.support import tokens
 from resources.lib import account
 from resources.lib import addon
 from resources.lib import feeds
+from resources.lib import framerates
 from resources.lib import http
 from resources.lib import innertube
 from resources.lib import playback
@@ -63,8 +64,10 @@ class PlaybackTestCase(AddonTestCase):
         self.client = innertube.ANDROID_VR
         self.player_requests = []
         FakeManifestServer.instances = []
+        self.frame_rate_requests = []
         for patcher in (mock.patch.object(innertube, 'get_player', self._get_player),
-                        mock.patch.object(playback, 'ManifestServer', FakeManifestServer)):
+                        mock.patch.object(playback, 'ManifestServer', FakeManifestServer),
+                        mock.patch.object(framerates, 'of_formats', self._frame_rates)):
             patcher.start()
             self.addCleanup(patcher.stop)
 
@@ -74,6 +77,11 @@ class PlaybackTestCase(AddonTestCase):
         if isinstance(self.response, Exception):
             raise self.response
         return innertube.Player(self.response, self.client)
+
+    def _frame_rates(self, formats, headers):
+        self.frame_rate_requests.append(headers)
+        return {fps: '{}000/1001'.format(fps) for fps in {data.get('fps') for data in formats}
+                if fps}
 
     def play(self, video_id='abc'):
         self.dispatch('play', '?v=' + video_id)
@@ -147,6 +155,15 @@ class VideoTest(PlaybackTestCase):
         self.response = player_response('abc', formats=(VP9_1080, AUTO_DUB_DE, ORIGINAL_EN))
         self.play()
         self.assertEqual(self.audio_names(), ['Opus'])
+
+    def test_the_video_carries_its_frame_rate_read_as_the_client_that_was_served(self):
+        self.response = player_response('abc', formats=(dict(VP9_1080, fps=24), OPUS))
+        self.play()
+        representation = self.manifest().find(
+            ".//{urn:mpeg:dash:schema:mpd:2011}AdaptationSet[@contentType='video']/"
+            "{urn:mpeg:dash:schema:mpd:2011}Representation")
+        self.assertEqual(representation.get('frameRate'), '24000/1001')
+        self.assertEqual(self.frame_rate_requests, [innertube.ANDROID_VR.stream_headers])
 
     def test_the_caption_tracks_become_subtitles(self):
         self.response['captions'] = {'playerCaptionsTracklistRenderer': {'captionTracks': [
