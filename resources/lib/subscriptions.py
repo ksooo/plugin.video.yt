@@ -14,14 +14,17 @@ unsubscribing takes. Listing the subscriptions, subscribing and unsubscribing
 bring it up to date; otherwise it is fetched again after MAX_AGE_SECONDS.
 """
 
+from concurrent.futures import ThreadPoolExecutor
 import time
 
 from . import account
 from . import addon
 from . import dataapi
-from . import rss
 
 MAX_AGE_SECONDS = 3600
+
+#: How many channels are asked for their newest videos at once.
+PARALLEL_CHANNELS = 8
 
 
 def list_channels(auth):
@@ -40,8 +43,15 @@ def subscription_ids(auth):
 
 
 def latest_video_ids(count, auth):
-    """Return the ids of the newest videos of all subscribed channels, the newest first."""
-    return rss.uploads(list(subscription_ids(auth)))[:count]
+    """Return the ids of the newest videos of all subscribed channels, the newest first.
+
+    1 unit per channel.
+    """
+    with ThreadPoolExecutor(PARALLEL_CHANNELS) as pool:
+        uploads = [upload for channel in pool.map(
+            lambda channel_id: dataapi.channel_uploads(channel_id, dataapi.PAGE_SIZE, auth=auth),
+            subscription_ids(auth)) for upload in channel]
+    return [video_id for _, video_id in sorted(uploads, reverse=True)[:count]]
 
 
 def subscribe(channel_id, auth):

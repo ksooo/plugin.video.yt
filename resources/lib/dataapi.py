@@ -106,27 +106,32 @@ def unsubscribe(subscription_id, auth):
 
 
 def channel_videos(channel_id, count, auth):
-    """Return the newest videos of the channel, newest first. 2 units per 50 videos.
+    """Return the newest videos of the channel, newest first. 2 units per 50 videos."""
+    return videos([video_id for _, video_id in channel_uploads(channel_id, count, auth)], auth)
 
-    These are the videos of the channel page's "Videos" tab: no shorts, no
-    live recordings. YouTube keeps them in a playlist of their own, whose id
-    is derived from the channel id.
+
+def channel_uploads(channel_id, count, auth):
+    """Return (published, video id) of the newest videos of the channel, newest first.
+
+    1 unit per 50. These are the videos of the channel page's "Videos" tab: no
+    shorts, no live recordings. YouTube keeps them in a playlist of their own,
+    whose id is derived from the channel id.
     """
     playlist_id = 'UULF' + channel_id[2:]
-    video_ids = []
+    uploads = []
     try:
         for item in _all_items('playlistItems', {
                 'part': 'contentDetails',
                 'playlistId': playlist_id,
         }, auth, limit=count):
-            video_ids.append(item['contentDetails']['videoId'])
+            details = item['contentDetails']
+            uploads.append((details.get('videoPublishedAt', ''), details['videoId']))
     except DataApiError as error:
         # The playlist only exists once the channel has a video in it.
         if str(error) == 'playlistNotFound':
             return []
         raise
-
-    return videos(video_ids, auth)
+    return uploads
 
 
 def video_categories(region, language, auth):

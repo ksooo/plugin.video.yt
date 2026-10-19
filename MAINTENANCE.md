@@ -28,12 +28,11 @@ those in a playlist of its own: `UULF` followed by the channel id without its
 `UC`. It holds neither shorts (`UUSH`) nor live recordings (`UULV`), and
 does not exist for a channel without a single such video.
 
-"All subscriptions" merges the same playlists of all subscribed channels.
-The Data API would cost a unit per channel, so `rss.py` reads YouTube's RSS
-feeds instead, `feeds/videos.xml?playlist_id=UULF...`, eight at a time:
-no quota, the 15 newest videos of each. Only the details of the newest 100
-go through the Data API. The folder is kept on top of the channels with the
-`SpecialSort` property.
+"All subscriptions" merges the same playlists of all subscribed channels,
+the newest 50 videos of each, eight channels at a time. YouTube's RSS feeds
+of the playlists would cost no quota, but they answer unreliably: the same
+feed comes at times with its videos, at times as HTTP 404 or 500. The folder
+is kept on top of the channels with the `SpecialSort` property.
 
 The likes come from `videos.list` with `myRating=like`, details included.
 
@@ -121,11 +120,11 @@ cached; a listing is refreshed after a change, as for the subscriptions.
 
 `dataapi.py` wraps the calls; each notes its quota cost. A project gets
 10,000 units a day. Opening the subscriptions costs 1 unit per 50 channels,
-opening a channel 4 units, a category of trending videos 2, the likes 2, a
-search 101, subscribing or unsubscribing 50, liking or taking a like back
-50. Signed in, a listing of videos costs 1 unit more per 50 videos for their
-ratings. Finding the trending categories costs one unit per category once a
-day.
+all subscriptions 1 unit per channel and 2 more, opening a channel 4 units,
+a category of trending videos 2, the likes 2, a search 101, subscribing or
+unsubscribing 50, liking or taking a like back 50. Signed in, a listing of
+videos costs 1 unit more per 50 videos for their ratings. Finding the
+trending categories costs one unit per category once a day.
 
 A video costs the same whichever parts of it are asked for, so the listings
 take its `statistics` too: the numbers of views and likes head its plot,

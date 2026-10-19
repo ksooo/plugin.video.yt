@@ -23,7 +23,6 @@ from resources.lib import dataapi
 from resources.lib import http
 from resources.lib import innertube
 from resources.lib import listing
-from resources.lib import rss
 from resources.lib.router import Router
 
 CHANNELS = [dataapi.Channel('UC1', 'Alpha & Omega', 'https://yt3/UC1', 'sub-UC1'),
@@ -196,22 +195,34 @@ class LatestTest(BrowseTestCase):
 
     def setUp(self):
         super().setUp()
-        self.uploads = ['n{}'.format(number) for number in range(120)]
-        self.feeds = []
-        patcher = mock.patch.object(rss, 'uploads', self._uploads)
+        self.cache_channels({'UC1': 'sub-UC1', 'UC2': 'sub-UC2'})
+        # The newest uploads by channel, as (published, video id)
+        self.uploads = {'UC1': [('2026-10-05T10:00:00Z', 'a5'), ('2026-10-03T10:00:00Z', 'a3')],
+                        'UC2': [('2026-10-04T10:00:00Z', 'b4'), ('2026-10-01T10:00:00Z', 'b1')]}
+        self.asked = []
+        patcher = mock.patch.object(dataapi, 'channel_uploads', self._channel_uploads)
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def _uploads(self, channel_ids):
-        self.feeds.append(sorted(channel_ids))
-        return self.uploads
+    def _channel_uploads(self, channel_id, count, auth):
+        self.asked.append((channel_id, count, auth.token))
+        return self.uploads[channel_id]
 
-    def test_the_newest_hundred_of_all_subscribed_channels_are_listed(self):
-        self.cache_channels({'UC1': 'sub-UC1', 'UC2': 'sub-UC2'})
+    def test_the_newest_videos_of_all_subscribed_channels_come_newest_first(self):
         self.dispatch('subscriptions/latest')
-        self.assertEqual(self.feeds, [['UC1', 'UC2']])
-        self.assertEqual(self.queried('videos'), [(self.uploads[:100],)])
+        self.assertEqual(sorted(self.asked), [('UC1', 50, 'access-user'),
+                                              ('UC2', 50, 'access-user')])
+        self.assertEqual(self.queried('videos'), [(['a5', 'b4', 'a3', 'b1'],)])
         self.assertEqual(support.PLUGIN_STATE['category'], 'L30200 / L30205')
+
+    def test_no_more_than_a_hundred_are_listed(self):
+        self.uploads['UC1'] = [('2026-10-05T10:{:02d}:00Z'.format(minute), 'a{}'.format(minute))
+                               for minute in range(59, -1, -1)]
+        self.uploads['UC2'] = [('2026-10-04T10:{:02d}:00Z'.format(minute), 'b{}'.format(minute))
+                               for minute in range(59, -1, -1)]
+        self.dispatch('subscriptions/latest')
+        video_ids = self.queried('videos')[0][0]
+        self.assertEqual((len(video_ids), video_ids[0], video_ids[-1]), (100, 'a59', 'b20'))
 
     def test_they_lead_to_their_channel(self):
         list_item = self.dispatch('subscriptions/latest')[0][1]
@@ -221,7 +232,7 @@ class LatestTest(BrowseTestCase):
         self.sign_out(api_key='key-1')
         self.dispatch('subscriptions/latest')
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30105')])
-        self.assertEqual(self.feeds, [])
+        self.assertEqual(self.asked, [])
 
 
 class LiveTest(BrowseTestCase):

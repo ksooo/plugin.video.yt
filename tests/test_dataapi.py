@@ -31,8 +31,8 @@ def subscription(channel_id, title):
                                        'high': {'url': 'https://yt3/{}-h'.format(channel_id)}}}}
 
 
-def playlist_item(video_id):
-    return {'contentDetails': {'videoId': video_id}}
+def playlist_item(video_id, published=''):
+    return {'contentDetails': {'videoId': video_id, 'videoPublishedAt': published}}
 
 
 def video(video_id, duration='PT4M13S', **snippet):
@@ -229,6 +229,13 @@ class ChannelVideosTest(DataApiTestCase):
         self.assertEqual(len(self.requested('playlistItems')), 2)
         self.assertEqual([len(params['id'].split(',')) for params in self.requested('videos')],
                          [50, 10])
+
+    def test_the_uploads_come_with_their_publication(self):
+        self.responses['playlistItems'] = [{'items': [playlist_item('v2', '2026-10-18T10:00:00Z'),
+                                                      playlist_item('v1', '2026-10-17T10:00:00Z')]}]
+        self.assertEqual(dataapi.channel_uploads('UCabc', 50, auth=USER),
+                         [('2026-10-18T10:00:00Z', 'v2'), ('2026-10-17T10:00:00Z', 'v1')])
+        self.assertEqual(self.requested('videos'), [])
 
     def test_vanished_videos_are_left_out(self):
         self.responses['playlistItems'] = [{'items': [playlist_item('v1'), playlist_item('gone')]}]
