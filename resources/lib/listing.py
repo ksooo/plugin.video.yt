@@ -194,26 +194,33 @@ def _unsubscribe_entry(label_id, channel_id, channel_title):
         url('unsubscribe', channel=channel_id, title=channel_title))
 
 
-def finish_folders(handle, items, category, cache=True):
+def finish_folders(handle, items, category, cache=True, by_name=False):
     """Hand a listing of folders over to Kodi.
 
     Without cache, Kodi fetches the listing anew even when going back to it.
+    by_name starts it sorted by name rather than in the order given.
     """
     xbmcplugin.setPluginCategory(handle, category)
     xbmcplugin.addDirectoryItems(handle, items, len(items))
-    xbmcplugin.addSortMethod(handle, xbmcplugin.SORT_METHOD_UNSORTED)
-    xbmcplugin.addSortMethod(handle, xbmcplugin.SORT_METHOD_LABEL)
+    sort_methods = [xbmcplugin.SORT_METHOD_UNSORTED, xbmcplugin.SORT_METHOD_LABEL]
+    # Kodi starts with the first sort method.
+    for sort_method in (sort_methods[::-1] if by_name else sort_methods):
+        xbmcplugin.addSortMethod(handle, sort_method)
     xbmcplugin.endOfDirectory(handle, cacheToDisc=cache)
 
 
-def finish_videos(handle, items, category):
-    """Hand a listing of videos over to Kodi, newest first unless sorted otherwise."""
+def finish_videos(handle, items, category, by_date=False):
+    """Hand a listing of videos over to Kodi; by_date starts it newest first."""
     xbmcplugin.setPluginCategory(handle, category)
     xbmcplugin.setContent(handle, CONTENT_VIDEOS)
     xbmcplugin.addDirectoryItems(handle, items, len(items))
-    # The date beside each video, as Kodi shows it when sorting by date.
-    xbmcplugin.addSortMethod(handle, xbmcplugin.SORT_METHOD_UNSORTED, label2Mask='%J')
-    for sort_method in (xbmcplugin.SORT_METHOD_DATE, xbmcplugin.SORT_METHOD_TITLE,
-                        xbmcplugin.SORT_METHOD_DURATION):
-        xbmcplugin.addSortMethod(handle, sort_method)
+    sort_methods = [xbmcplugin.SORT_METHOD_DATE, xbmcplugin.SORT_METHOD_TITLE,
+                    xbmcplugin.SORT_METHOD_DURATION]
+    # Kodi starts with the first sort method.
+    sort_methods.insert(1 if by_date else 0, xbmcplugin.SORT_METHOD_UNSORTED)
+    for sort_method in sort_methods:
+        # The date beside each video, as Kodi shows it when sorting by date.
+        xbmcplugin.addSortMethod(
+            handle, sort_method,
+            label2Mask='%J' if sort_method == xbmcplugin.SORT_METHOD_UNSORTED else '')
     xbmcplugin.endOfDirectory(handle)

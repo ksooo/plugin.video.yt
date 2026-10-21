@@ -162,6 +162,10 @@ class SubscriptionsTest(BrowseTestCase):
                          ('L30205', 'plugin://plugin.video.yt/subscriptions/latest/', True))
         self.assertEqual(list_item.properties['SpecialSort'], 'top')
 
+    def test_the_channels_start_sorted_by_name(self):
+        self.dispatch('subscriptions')
+        self.assertEqual(support.PLUGIN_STATE['sort_methods'], ['label', 'unsorted'])
+
     def test_they_are_asked_for_with_the_users_token(self):
         self.dispatch('subscriptions')
         self.assertEqual(self.queries, [('subscriptions', (), 'access-user')])
@@ -224,6 +228,10 @@ class LatestTest(BrowseTestCase):
         video_ids = self.queried('videos')[0][0]
         self.assertEqual((len(video_ids), video_ids[0], video_ids[-1]), (100, 'a59', 'b20'))
 
+    def test_they_start_sorted_by_date(self):
+        self.dispatch('subscriptions/latest')
+        self.assertEqual(support.PLUGIN_STATE['sort_methods'][0], 'date')
+
     def test_they_lead_to_their_channel(self):
         list_item = self.dispatch('subscriptions/latest')[0][1]
         self.assertEqual(list_item.context_menu[0][0], 'L30206')
@@ -285,16 +293,6 @@ class ChannelTest(BrowseTestCase):
         return self.dispatch('channel',
                              '?id={}&title=Alpha+%26+Omega{}'.format(channel_id, parent))
 
-    def test_the_videos_come_newest_first_whatever_order_youtube_gives(self):
-        self.results['channel_videos'] = [
-            VIDEO._replace(video_id='old', published='2024-01-01T10:00:00Z'),
-            VIDEO._replace(video_id='new', published='2026-10-01T10:00:00Z'),
-            VIDEO._replace(video_id='mid', published='2025-06-01T10:00:00Z')]
-        self.assertEqual(self.urls(self.channel()),
-                         ['plugin://plugin.video.yt/play/?v=new',
-                          'plugin://plugin.video.yt/play/?v=mid',
-                          'plugin://plugin.video.yt/play/?v=old'])
-
     def test_the_newest_hundred_videos_of_the_channel_are_asked_for(self):
         self.channel()
         self.assertEqual(self.queried('channel_videos'), [('UC1', 100)])
@@ -325,11 +323,11 @@ class ChannelTest(BrowseTestCase):
         self.assertNotIn('Playcount', list_item.info_tag.values)
         self.assertNotIn('ResumePoint', list_item.info_tag.values)
 
-    def test_the_listing_is_one_of_videos_sorted_newest_first(self):
+    def test_the_listing_is_one_of_videos_starting_sorted_by_date(self):
         self.channel()
         self.assertEqual(support.PLUGIN_STATE['content'], 'videos')
         self.assertEqual(support.PLUGIN_STATE['sort_methods'],
-                         ['unsorted', 'date', 'title', 'duration'])
+                         ['date', 'unsorted', 'title', 'duration'])
 
     def test_the_default_order_shows_the_date_beside_each_video(self):
         self.channel()
@@ -394,6 +392,17 @@ class TrendingTest(BrowseTestCase):
                           'plugin://plugin.video.yt/trending/category/?id=10&title=Musik'])
         self.assertEqual(items[0][1].art['thumb'], VIDEO.thumbnail)
         self.assertEqual(support.PLUGIN_STATE['category'], 'L30300')
+
+    def test_the_categories_start_sorted_by_name_below_all_trends(self):
+        items = self.dispatch('trending')
+        self.assertEqual(support.PLUGIN_STATE['sort_methods'], ['label', 'unsorted'])
+        self.assertEqual([list_item.properties.get('SpecialSort') for _, list_item, _ in items],
+                         ['top', None, None])
+
+    def test_a_category_keeps_youtubes_order(self):
+        self.category()
+        self.assertEqual(support.PLUGIN_STATE['sort_methods'],
+                         ['unsorted', 'date', 'title', 'duration'])
 
     def test_all_trends_lists_the_most_popular_videos_of_all_categories(self):
         self.dispatch('trending/category', '?id=&title=Alle+Trends')

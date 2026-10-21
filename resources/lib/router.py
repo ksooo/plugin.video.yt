@@ -91,13 +91,15 @@ class Router:
         items = [listing.folder_item(addon.localize(30205), 'subscriptions/latest', on_top=True)]
         items.extend(listing.channel_item(channel) for channel in channels)
         # Going back to it after unsubscribing must not show the channel.
-        listing.finish_folders(self._handle, items, addon.localize(30200), cache=False)
+        listing.finish_folders(self._handle, items, addon.localize(30200), cache=False,
+                               by_name=True)
 
     def _list_latest(self):
         """Show the newest videos of all subscribed channels, the newest first."""
         self._list_videos(lambda auth: dataapi.videos(
             subscriptions.latest_video_ids(VIDEO_COUNT, auth), auth=auth),
-            listing.breadcrumb(addon.localize(30200), addon.localize(30205)), need_account=True)
+            listing.breadcrumb(addon.localize(30200), addon.localize(30205)), need_account=True,
+            by_date=True)
 
     def _list_channel(self):
         """Show the newest videos of a channel. Parameters: id, title, parent."""
@@ -116,9 +118,6 @@ class Router:
             return
 
         videos, subscribed, likes = result
-        # Newest first as the default, Kodi offers no way to make its own date
-        # sorting start descending.
-        videos = sorted(videos, key=lambda video: video.published, reverse=True)
         category = title
         if self._params.get('parent') == 'subscriptions':
             category = listing.breadcrumb(addon.localize(30200), title)
@@ -128,7 +127,7 @@ class Router:
                                                   link_channel=False,
                                                   percent_watched=progress.get(video.video_id))
                                for video in videos],
-                              category)
+                              category, by_date=True)
 
     def _list_recommendations(self):
         """Show YouTube's shelves of recommendations for the account."""
@@ -193,8 +192,9 @@ class Router:
         for category in categories:
             title = category.title or addon.localize(30310)
             items.append(listing.folder_item(title, 'trending/category', category.thumbnail,
+                                             on_top=not category.category_id,
                                              id=category.category_id, title=title))
-        listing.finish_folders(self._handle, items, addon.localize(30300))
+        listing.finish_folders(self._handle, items, addon.localize(30300), by_name=True)
 
     def _list_trending_category(self):
         """Show the most popular videos of a category. Parameters: id (empty for all), title."""
@@ -254,11 +254,12 @@ class Router:
                           listing.breadcrumb(addon.localize(30301), query),
                           nothing_found_label_id=30107)
 
-    def _list_videos(self, query, category, nothing_found_label_id=None, need_account=False):
+    def _list_videos(self, query, category, nothing_found_label_id=None, need_account=False,
+                     by_date=False):
         """Show the videos of various channels query(auth) returns.
 
         With nothing_found_label_id, finding no video is reported with that
-        message and Kodi stays where it is.
+        message and Kodi stays where it is. by_date starts the listing newest first.
         """
         def videos_and_account(auth):
             ids = subscriptions.subscription_ids(auth) if auth.token else None
@@ -282,7 +283,7 @@ class Router:
                                                   link_channel=True,
                                                   percent_watched=progress.get(video.video_id))
                                for video in videos],
-                              category)
+                              category, by_date=by_date)
 
     @staticmethod
     def _likes(videos, auth):

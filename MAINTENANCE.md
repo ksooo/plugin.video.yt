@@ -36,13 +36,12 @@ is kept on top of the channels with the `SpecialSort` property.
 
 The likes come from `videos.list` with `myRating=like`, details included.
 
-Every video listing comes in an order of its own, which "Default", the first
-sort method, keeps: a channel newest first, the history last watched first,
-search, trending, recommendations and likes in YouTube's order. Kodi's
-"Date" would not do for the channels: it starts descending for Kodi's own
-listings, but for a plugin's always ascending -
-`CFileItemList::AddSortMethod` hands over an ascending order, where
-`CGUIViewState::AddSortMethod` would pick descending for an unset one.
+Kodi starts a listing with its first sort method. A channel and "All
+subscriptions" start with "Date", which Kodi starts newest first; the
+subscribed channels and the trending categories with "Name", "All
+subscriptions" and "All trends" kept on top. Every other listing starts with
+"Default", the order YouTube gives: the history last watched first, search,
+trending, recommendations and likes as YouTube ranks them.
 
 There is no "next page" entry: a channel, a trending category and the likes
 show 100 videos, a search 50, and that's it.
