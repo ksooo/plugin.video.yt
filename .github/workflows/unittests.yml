@@ -14,8 +14,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The oldest Kodi that can run this addon carries Python 3.8 on
-        # Windows; the newest carries 3.14. Both have to stay happy.
+        # Kodi on Linux uses the system's Python, which may be as old as 3.8;
+        # Kodi 22 itself ships 3.14. Both have to stay happy.
         python-version: ['3.8', '3.14']
     name: Python ${{ matrix.python-version }}
     steps:

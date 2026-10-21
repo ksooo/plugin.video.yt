@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kodi: [omega, piers]
+        kodi: [piers]
     steps:
       # Into a directory named after the addon: the checker takes the folder
       # name for the addon id and complains when they disagree.

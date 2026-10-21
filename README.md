@@ -77,8 +77,8 @@ YouTube: for a video in the history, the history wins again the next time the fo
 
 ## Requirements
 
-Kodi 21 (Omega) or newer and the add-on `inputstream.adaptive`, which plays the videos. Requiring
-version 21 of `inputstream.adaptive` is also what keeps the add-on off older Kodi versions.
+Kodi 22 (Piers) or newer and the add-on `inputstream.adaptive`, which plays the videos. Requiring
+version 22 of `inputstream.adaptive` is also what keeps the add-on off older Kodi versions.
 
 ## Setup
 

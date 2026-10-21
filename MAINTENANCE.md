@@ -274,11 +274,10 @@ inputstream.adaptive (ISA) fetches the segments with `Range` requests, directly
 from YouTube.
 
 ISA loads manifests over HTTP only - it requires the status line of an HTTP
-response, so neither a file path nor a `data:` URL works, in Kodi 21 and 22
-alike. `manifestserver.py` serves the manifest once from the plugin call
-itself, on `127.0.0.1` and a port the system picks. Kodi lets a plugin run on
-after `setResolvedUrl`, which is what makes this work without a background
-service.
+response, so neither a file path nor a `data:` URL works. `manifestserver.py`
+serves the manifest once from the plugin call itself, on `127.0.0.1` and a
+port the system picks. Kodi lets a plugin run on after `setResolvedUrl`,
+which is what makes this work without a background service.
 
 Subtitles come from the player response's `captionTracks`: every track made
 for the video plus the one recognized from the speech (`kind: asr`); the
@@ -311,8 +310,7 @@ Kodi-version notes:
 * The `name`, `default`, `original` and `impaired` attributes of an
   AdaptationSet are ISA extensions; they label and flag the entries of Kodi's
   stream dialogues.
-* The HDR `SupplementalProperty` is read by ISA 22 only. ISA 21 leaves the
-  colour information to the decoder, which takes it from the stream.
+* The HDR `SupplementalProperty` is read by ISA.
 
 Live streams skip all this: YouTube's own HLS manifest goes straight to ISA.
 
@@ -326,8 +324,8 @@ python3 -m unittest discover -s tests -t .
 ```
 
 Plain `unittest`, nothing beyond the standard library. The CI runs the tests
-with Python 3.8, the oldest one a supported Kodi carries (Kodi 21 on Windows),
-and 3.14, the newest one.
+with Python 3.8, as Kodi on Linux uses the system's Python, and 3.14, the one
+Kodi 22 ships on Windows, Android and macOS.
 
 Out of reach of the tests: the real YouTube responses and everything ISA does
 with the manifest.
