@@ -1,3 +1,6 @@
+v1.2.1
+- With Kodi 23, a video resumed and stopped again within its first three minutes no longer loses where it was stopped
+
 v1.2.0
 - Where Kodi adjusts the display's refresh rate to a video, it now does so before playback starts instead of a few seconds into it
 - Audio tracks YouTube dubbed automatically are named so in the audio stream dialogue; a new setting stops offering them
