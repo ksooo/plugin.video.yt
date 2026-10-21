@@ -47,11 +47,8 @@ listings, but for a plugin's always ascending -
 There is no "next page" entry: a channel, a trending category and the likes
 show 100 videos, a search 50, and that's it.
 
-Video titles lose the emojis they start with: Kodi renders a label starting
-with one blank. Emojis further on stay, as boxes - skin fonts have no glyphs
-for them. `listing._LEADING_EMOJIS` covers the emoji blocks, the symbols and
-dingbats used as emojis, and the invisible characters emojis are composed
-with; dashes, quotes or the euro sign are not affected.
+Video titles stay as YouTube has them. Kodi renders a label starting with an
+emoji blank, a Kodi bug the add-on deliberately leaves alone.
 
 ### Trending
 

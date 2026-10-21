@@ -583,30 +583,6 @@ class PlotTest(BrowseTestCase):
             self.assertEqual(listing._short_number(number), short, number)
 
 
-class EmojiTest(BrowseTestCase):
-
-    TITLES = {
-        '🤯 Home Assistant 2026.10: Deine Dashboard-Karten können jetzt SO VIEL MEHR!':
-            'Home Assistant 2026.10: Deine Dashboard-Karten können jetzt SO VIEL MEHR!',
-        '✈️ Fernzugriff Home Assistant': 'Fernzugriff Home Assistant',
-        '🦸‍♂️🚀  From Zero to Hero': 'From Zero to Hero',
-        'DIESE Karte verdient Liebe! ❤️ Die schlauste Raum-Karte':
-            'DIESE Karte verdient Liebe! ❤️ Die schlauste Raum-Karte',
-        'Dieses Display SIEHT dich – mmWave Radar für 10 €':
-            'Dieses Display SIEHT dich – mmWave Radar für 10 €',
-        '🚀': '🚀',
-    }
-
-    def listed(self, title):
-        self.results['most_popular'] = [VIDEO._replace(title=title)]
-        list_item = self.dispatch('trending/category', '?id=10&title=Musik')[0][1]
-        return list_item.label, list_item.info_tag.values['Title']
-
-    def test_only_emojis_starting_a_title_are_removed(self):
-        for title, expected in self.TITLES.items():
-            self.assertEqual(self.listed(title), (expected, expected), title)
-
-
 class SearchTest(BrowseTestCase):
 
     def test_the_search_offers_a_new_search_and_the_recent_ones(self):

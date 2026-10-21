@@ -8,7 +8,6 @@
 #
 """Directory listings: plugin URLs, list items and handing them to Kodi."""
 
-import re
 from urllib.parse import urlencode
 
 import xbmcgui
@@ -33,13 +32,6 @@ _COUNTS = (('views', 30500, 30501, 'lightblue'),
            ('likes', 30502, 30503, 'lime'))
 
 _NUMBER_SCALES = ('', 'K', 'M', 'B')
-
-#: Emojis and blanks at the start of a title. Kodi renders a label starting
-#: with an emoji blank, while other emojis merely show as boxes. Covered are
-#: the emoji blocks, the symbols and dingbats YouTube titles use as emojis,
-#: and the invisible characters emojis are composed with.
-_LEADING_EMOJIS = re.compile('^(?:[\U0001F000-\U0001FAFF☀-➿︎️‍'
-                             '⃣\U000E0020-\U000E007F]|\\s)+')
 
 
 def url(route, **params):
@@ -141,7 +133,7 @@ def video_item(video, subscribed, liked, link_channel, percent_watched=None):
                              'RunPlugin({})'.format(url('rate', v=video.video_id,
                                                         rating='none' if liked else 'like'))))
 
-    title = _LEADING_EMOJIS.sub('', video.title) or video.title
+    title = video.title
 
     list_item = xbmcgui.ListItem(label=title, offscreen=True)
     list_item.addContextMenuItems(context_menu)
