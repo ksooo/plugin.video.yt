@@ -17,6 +17,7 @@ ISA has fetched the manifest.
 import time
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
+from urllib.parse import urlsplit
 
 _PATH = '/manifest.mpd'
 
@@ -32,16 +33,25 @@ class ManifestServer:
         class Handler(BaseHTTPRequestHandler):
 
             def do_GET(self):
-                if self.path != _PATH:
+                if self._send_headers():
+                    self.wfile.write(body)
+                    owner.served = True
+
+            def do_HEAD(self):
+                # Kodi checks the URL before it plays it.
+                self._send_headers()
+
+            def _send_headers(self):
+                # Kodi's check adds the mime type as a query.
+                if urlsplit(self.path).path != _PATH:
                     self.send_error(404)
-                    return
+                    return False
                 self.send_response(200)
                 # ISA recognises the manifest type only by an exact match.
                 self.send_header('Content-Type', 'application/dash+xml')
                 self.send_header('Content-Length', str(len(body)))
                 self.end_headers()
-                self.wfile.write(body)
-                owner.served = True
+                return True
 
             def log_message(self, *args):
                 # The default writes to stderr, which Kodi logs as errors.
