@@ -103,10 +103,12 @@ def follow(url, tracking):
 
 def _position(player, url):
     """Return the position Kodi plays url at, None if it plays something else or nothing."""
+    if not player.isPlaying():
+        return None
     try:
         if player.getPlayingFile() == url:
             return player.getTime()
     except RuntimeError:
-        # Kodi is not playing anything.
+        # Playback stopped since the check above.
         pass
     return None

@@ -53,6 +53,7 @@ PROGRESS_CANCELED = [False]
 #: nothing. Every waitForAbort() moves on to the next second; after the last
 #: one, Kodi plays nothing.
 PLAYBACK = []
+PLAYER_ERRORS = []
 
 PROFILE_DIR = os.path.join(tempfile.gettempdir(), 'plugin.video.yt-test-profile')
 
@@ -87,11 +88,16 @@ class Monitor:
 
 def _playing():
     if not PLAYBACK or PLAYBACK[0] is None:
-        raise RuntimeError('Kodi is not playing any file')
+        error = RuntimeError('Kodi is not playing any file')
+        PLAYER_ERRORS.append(error)
+        raise error
     return PLAYBACK[0]
 
 
 class Player:
+    def isPlaying(self):
+        return bool(PLAYBACK) and PLAYBACK[0] is not None
+
     def getPlayingFile(self):
         return _playing()[0]
 
@@ -302,6 +308,7 @@ def reset():
     del PROGRESS[:]
     PROGRESS_CANCELED[0] = False
     del PLAYBACK[:]
+    del PLAYER_ERRORS[:]
     shutil.rmtree(PROFILE_DIR, ignore_errors=True)
 
 

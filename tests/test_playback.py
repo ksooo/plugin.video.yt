@@ -361,6 +361,12 @@ class SyncTest(PlaybackTestCase):
         self.play()
         self.assertEqual(self.reported()[-1], ('stopped', '0.000', '1.000'))
 
+    def test_waiting_for_and_ending_the_playback_raise_no_exceptions(self):
+        support.PLAYBACK[:] = [None, None] + [(MANIFEST_URL, second, False)
+                                              for second in range(3)]
+        self.play()
+        self.assertEqual(support.PLAYER_ERRORS, [])
+
     def test_shutting_down_kodi_sends_no_more_reports(self):
         self.watch(25)
         support.ABORT_REQUESTED[0] = True
