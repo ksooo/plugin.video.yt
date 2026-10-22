@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="plugin.video.yt"
        name="YouTube"
-       version="1.3.0"
+       version="1.3.1"
        provider-name="Kai Sommerfeld">
   <requires>
     <import addon="xbmc.python" version="3.0.1"/>
@@ -21,10 +21,8 @@
     <platform>all</platform>
     <license>GPL-2.0-or-later</license>
     <source>https://github.com/ksooo/plugin.video.yt</source>
-    <news>v1.3.0
-- Requires Kodi 22 (Piers) or newer
-- Channels and "All subscriptions" now start sorted by date, newest first; the subscriptions and the trending categories start sorted by name
-- Video titles starting with an emoji are no longer shortened; Kodi 22 shows such titles blank</news>
+    <news>v1.3.1
+- Playing a video no longer leaves error messages in the Kodi log</news>
     <assets>
       <icon>resources/icon.png</icon>
     </assets>

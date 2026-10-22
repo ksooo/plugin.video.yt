@@ -1,3 +1,6 @@
+v1.3.1
+- Playing a video no longer leaves error messages in the Kodi log
+
 v1.3.0
 - Requires Kodi 22 (Piers) or newer
 - Channels and "All subscriptions" now start sorted by date, newest first; the subscriptions and the trending categories start sorted by name
