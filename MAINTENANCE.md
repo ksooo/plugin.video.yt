@@ -29,7 +29,7 @@ those in a playlist of its own: `UULF` followed by the channel id without its
 does not exist for a channel without a single such video.
 
 "All subscriptions" merges the same playlists of all subscribed channels,
-the newest 50 videos of each, eight channels at a time. YouTube's RSS feeds
+the newest 50 videos of each, sixteen channels at a time. YouTube's RSS feeds
 of the playlists would cost no quota, but they answer unreliably: the same
 feed comes at times with its videos, at times as HTTP 404 or 500. The folder
 is kept on top of the channels with the `SpecialSort` property.

@@ -13,6 +13,7 @@ e.g. plugin://plugin.video.yt/play/?v=<id>. Kodi stores resume points and play
 counts under these URLs, so the URL of a video must never change.
 """
 
+from concurrent.futures import ThreadPoolExecutor
 import time
 from urllib.parse import parse_qsl
 from urllib.parse import urlsplit
@@ -113,7 +114,7 @@ class Router:
             videos = dataapi.channel_videos(channel_id, VIDEO_COUNT, auth=auth)
             return videos, subscribed, self._likes(videos, auth)
 
-        result = self._query_data_api(query)
+        result, progress = self._query_with_watch_progress(query)
         if result is None:
             return
 
@@ -121,7 +122,6 @@ class Router:
         category = title
         if self._params.get('parent') == 'subscriptions':
             category = listing.breadcrumb(addon.localize(30200), title)
-        progress = self._watch_progress()
         listing.finish_videos(self._handle,
                               [listing.video_item(video, subscribed, likes.get(video.video_id),
                                                   link_channel=False,
@@ -266,7 +266,8 @@ class Router:
             videos = query(auth)
             return videos, ids, self._likes(videos, auth)
 
-        result = self._query_data_api(videos_and_account, need_account=need_account)
+        result, progress = self._query_with_watch_progress(videos_and_account,
+                                                           need_account=need_account)
         if result is None:
             return
 
@@ -275,7 +276,6 @@ class Router:
             self._fail(addon.localize(nothing_found_label_id), listing_route=True)
             return
 
-        progress = self._watch_progress()
         listing.finish_videos(self._handle,
                               [listing.video_item(video,
                                                   None if ids is None else video.channel_id in ids,
@@ -293,10 +293,20 @@ class Router:
         ratings = dataapi.ratings([video.video_id for video in videos], auth=auth)
         return {video.video_id: ratings.get(video.video_id) == 'like' for video in videos}
 
+    def _query_with_watch_progress(self, query, need_account=False):
+        """Return what _query_data_api() returns for query, and the watch progress."""
+        # The watch progress needs nothing of the query, so it comes in meanwhile.
+        with ThreadPoolExecutor(1) as pool:
+            progress = pool.submit(self._watch_progress, account.sync_token())
+            result = self._query_data_api(query, need_account=need_account)
+        return result, progress.result()
+
     @staticmethod
-    def _watch_progress():
-        """Return how far the account watched the videos of its history, empty if not syncing."""
-        access_token = account.sync_token()
+    def _watch_progress(access_token):
+        """Return how far the account watched the videos of its history, empty if not syncing.
+
+        access_token is account.sync_token()'s.
+        """
         if access_token is None:
             return {}
         try:

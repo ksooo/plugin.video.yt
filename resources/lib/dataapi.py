@@ -12,6 +12,7 @@ Every call costs quota, 10,000 units a day per Google Cloud project. The
 functions note what they cost.
 """
 
+from concurrent.futures import ThreadPoolExecutor
 import calendar
 import collections
 import re
@@ -183,12 +184,11 @@ def videos(video_ids, auth):
     Videos that are private or deleted by now are left out.
     """
     details = {}
-    for start in range(0, len(video_ids), PAGE_SIZE):
-        response = _request('GET', 'videos', {
+    for response in _per_page(video_ids, lambda page: _request('GET', 'videos', {
             'part': _VIDEO_PARTS,
-            'id': ','.join(video_ids[start:start + PAGE_SIZE]),
+            'id': ','.join(page),
             'maxResults': PAGE_SIZE,
-        }, auth)
+    }, auth)):
         for item in response.get('items', []):
             details[item['id']] = _video(item)
     return [details[video_id] for video_id in video_ids if video_id in details]
@@ -208,9 +208,8 @@ def ratings(video_ids, auth):
     A rating is 'like', 'dislike' or 'none'.
     """
     result = {}
-    for start in range(0, len(video_ids), PAGE_SIZE):
-        response = _request('GET', 'videos/getRating',
-                            {'id': ','.join(video_ids[start:start + PAGE_SIZE])}, auth)
+    for response in _per_page(video_ids, lambda page: _request(
+            'GET', 'videos/getRating', {'id': ','.join(page)}, auth)):
         result.update((item['videoId'], item['rating']) for item in response.get('items', []))
     return result
 
@@ -239,6 +238,15 @@ def _all_items(resource, params, auth, limit=None):
         page_token = response.get('nextPageToken')
         if not page_token or (limit is not None and count >= limit):
             return
+
+
+def _per_page(video_ids, request):
+    """Return request(page) for the video ids PAGE_SIZE at a time, all asked for at once."""
+    pages = [video_ids[start:start + PAGE_SIZE] for start in range(0, len(video_ids), PAGE_SIZE)]
+    if not pages:
+        return []
+    with ThreadPoolExecutor(len(pages)) as pool:
+        return list(pool.map(request, pages))
 
 
 def _request(method, resource, params, auth, payload=None):

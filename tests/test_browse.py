@@ -10,6 +10,7 @@
 
 import json
 import os
+import threading
 import time
 from unittest import mock
 
@@ -551,6 +552,21 @@ class SyncTest(BrowseTestCase):
         self.progress = {'dQw4w9WgXcQ': 50}
         self.assertNotIn('ResumePoint', self.found())
         self.assertEqual(self.browsed, [])
+
+    def test_the_history_comes_in_while_the_videos_are_asked_for(self):
+        self.progress = {'dQw4w9WgXcQ': 50}
+        both = threading.Barrier(2, timeout=1)
+
+        def waiting(function):
+            def wait_then_call(*args, **kwargs):
+                both.wait()
+                return function(*args, **kwargs)
+            return wait_then_call
+
+        with mock.patch.object(dataapi, 'search', waiting(dataapi.search)), \
+                mock.patch.object(innertube, 'get_watch_progress',
+                                  waiting(innertube.get_watch_progress)):
+            self.assertEqual(self.found()['ResumePoint'], (106.5, 213))
 
     def test_when_the_history_fails_kodi_keeps_its_own(self):
         self.progress = http.RequestError('timed out from https://www.youtube.com/')

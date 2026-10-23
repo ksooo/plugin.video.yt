@@ -9,6 +9,7 @@
 """Tests for resources.lib.dataapi."""
 
 import calendar
+import threading
 import unittest
 from unittest import mock
 from urllib.parse import parse_qsl
@@ -188,8 +189,8 @@ class RatingTest(DataApiTestCase):
             {'items': [{'videoId': 'v50', 'rating': 'dislike'}]}]
         self.assertEqual(dataapi.ratings(video_ids, auth=USER),
                          {'v0': 'like', 'v1': 'none', 'v50': 'dislike'})
-        self.assertEqual(self.requested('getRating'),
-                         [{'id': ','.join(video_ids[:50])}, {'id': 'v50'}])
+        self.assertCountEqual(self.requested('getRating'),
+                              [{'id': ','.join(video_ids[:50])}, {'id': 'v50'}])
 
     def test_no_videos_ask_for_nothing(self):
         self.assertEqual(dataapi.ratings([], auth=USER), {})
@@ -354,3 +355,20 @@ class VideoDetailsTest(DataApiTestCase):
     def test_counts_youtube_hides_are_none(self):
         details = self.details(dict(video('v1'), statistics={'viewCount': '12'}))
         self.assertEqual((details.views, details.likes), (12, None))
+
+
+class PagesTest(DataApiTestCase):
+
+    def test_the_pages_are_asked_for_at_once(self):
+        video_ids = ['v{}'.format(number) for number in range(51)]
+        self.responses['getRating'] = [{'items': []}, {'items': []}]
+        both_pages = threading.Barrier(2, timeout=1)
+        answer = self._request_json
+
+        def request_json(*args, **kwargs):
+            both_pages.wait()
+            return answer(*args, **kwargs)
+
+        with mock.patch.object(dataapi.http, 'request_json', request_json):
+            dataapi.videos(video_ids, auth=USER)
+            dataapi.ratings(video_ids, auth=USER)

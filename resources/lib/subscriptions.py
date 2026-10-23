@@ -24,7 +24,7 @@ from . import dataapi
 MAX_AGE_SECONDS = 3600
 
 #: How many channels are asked for their newest videos at once.
-PARALLEL_CHANNELS = 8
+PARALLEL_CHANNELS = 16
 
 
 def list_channels(auth):
