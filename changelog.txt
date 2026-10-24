@@ -1,3 +1,6 @@
+v1.3.2
+- Video lists open faster, "All subscriptions" about twice as fast
+
 v1.3.1
 - Playing a video no longer leaves error messages in the Kodi log
 
