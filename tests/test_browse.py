@@ -26,8 +26,8 @@ from resources.lib import innertube
 from resources.lib import listing
 from resources.lib.router import Router
 
-CHANNELS = [dataapi.Channel('UC1', 'Alpha & Omega', 'https://yt3/UC1', 'sub-UC1'),
-            dataapi.Channel('UC2', 'Beta', '', 'sub-UC2')]
+CHANNELS = [innertube.Channel('UC1', 'Alpha & Omega', 'https://yt3/UC1'),
+            innertube.Channel('UC2', 'Beta', '')]
 
 VIDEO = dataapi.Video(video_id='dQw4w9WgXcQ', title='Never Gonna Give You Up',
                       description='The official video.', channel_id='UC1',
@@ -53,11 +53,10 @@ class BrowseTestCase(AddonTestCase):
         self.queries = []
         # Results of the data API calls by name, and an exception all of them
         # raise instead.
-        self.results = {'subscriptions': CHANNELS, 'channel_videos': [VIDEO],
+        self.results = {'channel_videos': [VIDEO],
                         'most_popular': [VIDEO], 'search': [VIDEO], 'videos': [VIDEO],
                         'video_categories': [dataapi.Category('10', 'Musik'),
-                                             dataapi.Category('20', 'Gaming')],
-                        'subscribe': 'sub-new', 'unsubscribe': None}
+                                             dataapi.Category('20', 'Gaming')]}
         self.failure = None
         for name in self.results:
             patcher = mock.patch.object(dataapi, name, self._query(name))
@@ -75,13 +74,21 @@ class BrowseTestCase(AddonTestCase):
         self.liked = []
         self.likes_asked = []
         self.likings = []
+        # The same for the subscriptions.
+        self.channels_asked = []
+        self.subscription_changes = []
         for patcher in (mock.patch.object(innertube, 'get_shelves', self._get_shelves),
                         mock.patch.object(innertube, 'get_watch_progress',
                                           self._get_watch_progress),
                         mock.patch.object(innertube, 'get_liked_video_ids',
                                           self._get_liked_video_ids),
                         mock.patch.object(innertube, 'like', self._liking('like')),
-                        mock.patch.object(innertube, 'remove_like', self._liking('remove'))):
+                        mock.patch.object(innertube, 'remove_like', self._liking('remove')),
+                        mock.patch.object(innertube, 'get_subscribed_channels',
+                                          self._get_subscribed_channels),
+                        mock.patch.object(innertube, 'subscribe', self._subscribing('subscribe')),
+                        mock.patch.object(innertube, 'unsubscribe',
+                                          self._subscribing('unsubscribe'))):
             patcher.start()
             self.addCleanup(patcher.stop)
 
@@ -106,6 +113,19 @@ class BrowseTestCase(AddonTestCase):
             self.likings.append((name, video_id, access_token))
         return liking
 
+    def _get_subscribed_channels(self, language, region, access_token):
+        self.channels_asked.append(access_token)
+        if self.failure is not None:
+            raise self.failure
+        return CHANNELS
+
+    def _subscribing(self, name):
+        def subscribing(channel_id, language, region, access_token):
+            if self.failure is not None:
+                raise self.failure
+            self.subscription_changes.append((name, channel_id, access_token))
+        return subscribing
+
     def _query(self, name):
         def query(*args, auth):
             self.queries.append((name, args, auth.token or 'key:' + auth.api_key))
@@ -121,7 +141,7 @@ class BrowseTestCase(AddonTestCase):
     def cache_channels(ids, age=0):
         os.makedirs(support.PROFILE_DIR, exist_ok=True)
         with open(SUBSCRIPTIONS_CACHE, 'w', encoding='utf-8') as cache_file:
-            json.dump({'saved_at': time.time() - age, 'channels': ids}, cache_file)
+            json.dump({'saved_at': time.time() - age, 'channel_ids': ids}, cache_file)
 
     @staticmethod
     def cache_likes(video_ids, age=0):
@@ -137,7 +157,7 @@ class BrowseTestCase(AddonTestCase):
     @staticmethod
     def cached_channels():
         with open(SUBSCRIPTIONS_CACHE, encoding='utf-8') as cache_file:
-            return json.load(cache_file)['channels']
+            return json.load(cache_file)['channel_ids']
 
     @staticmethod
     def urls(items):
@@ -198,14 +218,15 @@ class SubscriptionsTest(BrowseTestCase):
         self.dispatch('subscriptions')
         self.assertEqual(support.PLUGIN_STATE['sort_methods'], ['label', 'unsorted'])
 
-    def test_they_are_asked_for_with_the_users_token(self):
+    def test_they_are_asked_for_with_the_vr_token(self):
         self.dispatch('subscriptions')
-        self.assertEqual(self.queries, [('subscriptions', (), 'access-user')])
+        self.assertEqual(self.channels_asked, ['access-vr'])
+        self.assertEqual(self.queries, [])
 
     def test_they_are_always_fresh_and_update_the_cache(self):
-        self.cache_channels({'UCold': 'sub-old'})
+        self.cache_channels(['UCold'])
         self.dispatch('subscriptions')
-        self.assertEqual(self.cached_channels(), {'UC1': 'sub-UC1', 'UC2': 'sub-UC2'})
+        self.assertEqual(self.cached_channels(), ['UC1', 'UC2'])
 
     def test_channels_show_their_picture(self):
         items = self.dispatch('subscriptions')
@@ -231,7 +252,7 @@ class LatestTest(BrowseTestCase):
 
     def setUp(self):
         super().setUp()
-        self.cache_channels({'UC1': 'sub-UC1', 'UC2': 'sub-UC2'})
+        self.cache_channels(['UC1', 'UC2'])
         # The newest uploads by channel, as (published, video id)
         self.uploads = {'UC1': [('2026-10-05T10:00:00Z', 'a5'), ('2026-10-03T10:00:00Z', 'a3')],
                         'UC2': [('2026-10-04T10:00:00Z', 'b4'), ('2026-10-01T10:00:00Z', 'b1')]}
@@ -380,7 +401,7 @@ class ChannelTest(BrowseTestCase):
         self.assertEqual(list_item.context_menu, [])
 
     def test_a_subscribed_channels_videos_offer_unsubscribing_only(self):
-        self.cache_channels({'UC1': 'sub-UC1'})
+        self.cache_channels(['UC1'])
         list_item = self.channel()[0][1]
         self.assertEqual(list_item.context_menu, [(
             'L30203',
@@ -388,7 +409,7 @@ class ChannelTest(BrowseTestCase):
             LIKE])
 
     def test_another_channels_videos_offer_subscribing(self):
-        self.cache_channels({'UC2': 'sub-UC2'})
+        self.cache_channels(['UC2'])
         list_item = self.channel()[0][1]
         self.assertEqual(list_item.context_menu, [(
             'L30201',
@@ -396,15 +417,23 @@ class ChannelTest(BrowseTestCase):
             LIKE])
 
     def test_a_recent_cache_spares_asking_for_the_subscriptions(self):
-        self.cache_channels({'UC1': 'sub-UC1'}, age=3500)
+        self.cache_channels(['UC1'], age=3500)
         self.channel()
-        self.assertEqual(self.queried('subscriptions'), [])
+        self.assertEqual(self.channels_asked, [])
 
     def test_an_old_cache_is_renewed(self):
-        self.cache_channels({'UC1': 'sub-UC1'}, age=3700)
+        self.cache_channels(['UC1'], age=3700)
         self.channel()
-        self.assertEqual(self.queried('subscriptions'), [()])
-        self.assertEqual(self.cached_channels(), {'UC1': 'sub-UC1', 'UC2': 'sub-UC2'})
+        self.assertEqual(self.channels_asked, ['access-vr'])
+        self.assertEqual(self.cached_channels(), ['UC1', 'UC2'])
+
+    def test_a_cache_of_subscription_ids_is_renewed(self):
+        os.makedirs(support.PROFILE_DIR, exist_ok=True)
+        with open(SUBSCRIPTIONS_CACHE, 'w', encoding='utf-8') as cache_file:
+            json.dump({'saved_at': time.time(), 'channels': {'UC1': 'sub-UC1'}}, cache_file)
+        self.channel()
+        self.assertEqual(self.channels_asked, ['access-vr'])
+        self.assertEqual(self.cached_channels(), ['UC1', 'UC2'])
 
 
 GO_TO_CHANNEL = (
@@ -449,7 +478,7 @@ class TrendingTest(BrowseTestCase):
         self.assertEqual(support.PLUGIN_STATE['category'], 'L30300 / Musik')
 
     def test_videos_lead_to_their_channel_and_know_the_subscription(self):
-        self.cache_channels({'UC1': 'sub-UC1'})
+        self.cache_channels(['UC1'])
         list_item = self.category()[0][1]
         self.assertEqual([entry[0] for entry in list_item.context_menu], ['L30206', 'L30700'])
         self.assertEqual(list_item.context_menu[0], (
@@ -457,7 +486,7 @@ class TrendingTest(BrowseTestCase):
                       '?channel=UC1&subscribed=1&title=Alpha+%26+Omega)'))
 
     def test_the_channel_submenu_is_named_after_the_channel(self):
-        self.cache_channels({})
+        self.cache_channels([])
         with mock.patch.object(addon, 'localize', lambda string_id: 'L{} {{0}}'.format(string_id)):
             list_item = self.category()[0][1]
         self.assertEqual(list_item.context_menu[0], (
@@ -749,20 +778,20 @@ class ChannelMenuTest(BrowseTestCase):
                          ['Container.Update(plugin://plugin.video.yt/channel/?id=UC9&title=Gamma)'])
 
     def test_unsubscribing_asks_and_ends_the_subscription(self):
-        self.cache_channels({'UC9': 'sub-UC9'})
+        self.cache_channels(['UC9'])
         self.choose(1, 1)
         self.assertEqual(support.CONFIRMATIONS, [('YouTube', 'L30212')])
-        self.assertEqual(self.queried('unsubscribe'), [('sub-UC9',)])
+        self.assertEqual(self.subscription_changes, [('unsubscribe', 'UC9', 'access-vr')])
 
     def test_subscribing_subscribes(self):
-        self.cache_channels({})
+        self.cache_channels([])
         self.choose(0, 1)
-        self.assertEqual(self.queried('subscribe'), [('UC9',)])
+        self.assertEqual(self.subscription_changes, [('subscribe', 'UC9', 'access-vr')])
 
     def test_cancelling_changes_nothing(self):
-        self.cache_channels({'UC9': 'sub-UC9'})
+        self.cache_channels(['UC9'])
         self.choose(1, -1)
-        self.assertEqual((support.BUILTINS, support.CONFIRMATIONS, self.queried('unsubscribe')),
+        self.assertEqual((support.BUILTINS, support.CONFIRMATIONS, self.subscription_changes),
                          ([], [], []))
 
 
@@ -774,72 +803,78 @@ class SubscriptionChangeTest(BrowseTestCase):
                 '?channel={}&title=Gamma'.format(channel_id)]).dispatch()
 
     def test_subscribing_adds_the_channel_to_the_cache(self):
-        self.cache_channels({'UC1': 'sub-UC1'})
+        self.cache_channels(['UC1'])
         self.act('subscribe')
-        self.assertEqual(self.queried('subscribe'), [('UC9',)])
-        self.assertEqual(self.cached_channels(), {'UC1': 'sub-UC1', 'UC9': 'sub-new'})
+        self.assertEqual(self.subscription_changes, [('subscribe', 'UC9', 'access-vr')])
+        self.assertEqual(self.cached_channels(), ['UC1', 'UC9'])
 
     def test_unsubscribing_ends_the_subscription_and_drops_it_from_the_cache(self):
-        self.cache_channels({'UC1': 'sub-UC1', 'UC9': 'sub-UC9'})
+        self.cache_channels(['UC1', 'UC9'])
         self.act('unsubscribe')
-        self.assertEqual(self.queried('unsubscribe'), [('sub-UC9',)])
-        self.assertEqual(self.cached_channels(), {'UC1': 'sub-UC1'})
+        self.assertEqual(self.subscription_changes, [('unsubscribe', 'UC9', 'access-vr')])
+        self.assertEqual(self.cached_channels(), ['UC1'])
 
     def test_unsubscribing_asks_first(self):
-        self.cache_channels({'UC9': 'sub-UC9'})
+        self.cache_channels(['UC9'])
         self.act('unsubscribe')
         self.assertEqual(support.CONFIRMATIONS, [('YouTube', 'L30212')])
 
     def test_saying_no_keeps_the_subscription(self):
-        self.cache_channels({'UC9': 'sub-UC9'})
+        self.cache_channels(['UC9'])
         support.CONFIRM_ANSWER[0] = False
         self.act('unsubscribe')
-        self.assertEqual(self.queried('unsubscribe'), [])
-        self.assertEqual(self.cached_channels(), {'UC9': 'sub-UC9'})
+        self.assertEqual(self.subscription_changes, [])
+        self.assertEqual(self.cached_channels(), ['UC9'])
         self.assertEqual((support.NOTIFICATIONS, support.BUILTINS), ([], []))
 
     def test_subscribing_does_not_ask(self):
-        self.cache_channels({})
+        self.cache_channels([])
         self.act('subscribe')
         self.assertEqual(support.CONFIRMATIONS, [])
 
-    def test_a_subscription_made_elsewhere_is_found_to_end_it(self):
-        self.cache_channels({'UC9': 'sub-UC9'})
+    def test_a_subscription_made_elsewhere_can_be_ended(self):
+        self.cache_channels(['UC9'])
         self.act('unsubscribe', 'UC2')
-        self.assertEqual(self.queried('unsubscribe'), [('sub-UC2',)])
+        self.assertEqual(self.subscription_changes, [('unsubscribe', 'UC2', 'access-vr')])
 
     def test_subscribing_is_reported_and_the_listing_refreshed(self):
-        self.cache_channels({})
+        self.cache_channels([])
         self.act('subscribe')
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30210')])
         self.assertEqual(support.BUILTINS, ['Container.Refresh'])
 
     def test_unsubscribing_elsewhere_refreshes_the_listing(self):
-        self.cache_channels({'UC9': 'sub-UC9'})
+        self.cache_channels(['UC9'])
         support.INFO_LABELS['Container.FolderPath'] = 'plugin://plugin.video.yt/subscriptions/'
         self.act('unsubscribe')
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30211')])
         self.assertEqual(support.BUILTINS, ['Container.Refresh'])
 
     def test_unsubscribing_in_the_channels_listing_leaves_it(self):
-        self.cache_channels({'UC9': 'sub-UC9'})
+        self.cache_channels(['UC9'])
         support.INFO_LABELS['Container.FolderPath'] = (
             'plugin://plugin.video.yt/channel/?id=UC9&title=Gamma')
         self.act('unsubscribe')
         self.assertEqual(support.BUILTINS, ['Action(ParentDir)'])
 
+    def test_without_sign_in_the_user_is_told(self):
+        self.sign_out(api_key='key-1')
+        self.act('subscribe')
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30105')])
+        self.assertEqual(self.subscription_changes, [])
+
     def test_unsubscribing_in_another_channels_listing_stays(self):
-        self.cache_channels({'UC9': 'sub-UC9'})
+        self.cache_channels(['UC9'])
         support.INFO_LABELS['Container.FolderPath'] = (
             'plugin://plugin.video.yt/channel/?id=UC1&title=Alpha')
         self.act('unsubscribe')
         self.assertEqual(support.BUILTINS, ['Container.Refresh'])
 
     def test_a_failed_change_is_reported_without_refreshing(self):
-        self.cache_channels({})
-        self.failure = dataapi.DataApiError('forbidden')
+        self.cache_channels([])
+        self.failure = http.RequestError('timed out')
         self.act('subscribe')
-        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30103')])
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30101')])
         self.assertEqual(support.BUILTINS, [])
         self.assertNotIn('succeeded', support.PLUGIN_STATE)
 
@@ -935,7 +970,7 @@ class FailureTest(BrowseTestCase):
         localize = mock.patch.object(addon, 'localize',
                                      lambda string_id: 'L{} {{0}}'.format(string_id))
         with mock.patch.object(dataapi, 'quota_reset', return_value=reset), localize:
-            self.dispatch('subscriptions')
+            self.dispatch('trending/category', '?id=10&title=Musik')
         self.assertEqual(support.NOTIFICATIONS,
                          [('YouTube', 'L30104 ' + time.strftime('%H:%M', time.localtime(reset)))])
         self.assertFalse(support.PLUGIN_STATE['succeeded'])

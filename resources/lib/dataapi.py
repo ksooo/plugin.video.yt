@@ -30,9 +30,6 @@ PAGE_SIZE = 50
 #: or else by an API key. Whatever concerns the account itself needs the token.
 Auth = collections.namedtuple('Auth', 'token api_key')
 
-#: A subscribed channel. Unsubscribing takes the subscription's id, not the channel's.
-Channel = collections.namedtuple('Channel', 'channel_id title thumbnail subscription_id')
-
 Category = collections.namedtuple('Category', 'category_id title')
 
 #: views and likes are None where YouTube hides them, and for videos cached
@@ -78,32 +75,6 @@ def _sunday(year, month, number):
     """Return the Unix time of the start, in UTC, of the month's Sunday with the number."""
     first = calendar.timegm((year, month, 1, 0, 0, 0))
     return first + ((6 - time.gmtime(first).tm_wday) % 7 + 7 * (number - 1)) * 86400
-
-
-def subscriptions(auth):
-    """Return the channels the account subscribed to, by title. 1 unit per 50 channels."""
-    channels = []
-    for item in _all_items('subscriptions', {
-            'part': 'snippet',
-            'mine': 'true',
-            'order': 'alphabetical',
-    }, auth):
-        snippet = item['snippet']
-        channels.append(Channel(snippet['resourceId']['channelId'], snippet['title'],
-                                _thumbnail(snippet), item['id']))
-    return channels
-
-
-def subscribe(channel_id, auth):
-    """Subscribe to the channel and return the subscription's id. 50 units."""
-    return _request('POST', 'subscriptions', {'part': 'snippet'}, auth, {
-        'snippet': {'resourceId': {'kind': 'youtube#channel', 'channelId': channel_id}},
-    })['id']
-
-
-def unsubscribe(subscription_id, auth):
-    """End the subscription. 50 units."""
-    _request('DELETE', 'subscriptions', {'id': subscription_id}, auth)
 
 
 def channel_videos(channel_id, count, auth):

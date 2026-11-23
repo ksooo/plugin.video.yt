@@ -383,6 +383,52 @@ class LikeTest(BrowseTestCase):
         self.assertEqual(payload['target'], {'videoId': 'v1'})
 
 
+def compact_channel(channel_id, title, thumbnail_url=None):
+    channel = {'channelId': channel_id, 'title': {'runs': [{'text': title}]}}
+    if thumbnail_url:
+        channel['thumbnail'] = {'thumbnails': [{'url': thumbnail_url + '=s88'},
+                                               {'url': thumbnail_url + '=s176'}]}
+    return {'compactChannelRenderer': channel}
+
+
+class SubscribedChannelsTest(BrowseTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.response = browse_response({'shelfRenderer': {'content': {'verticalListRenderer': {
+            'items': [compact_channel('UC1', 'Alpha', '//yt3.ggpht.com/a'),
+                      compact_channel('UC2', 'Beta')]}}}})
+
+    def test_the_channels_come_with_title_and_largest_picture(self):
+        self.assertEqual(innertube.get_subscribed_channels('de', 'DE', 'access-vr'),
+                         [innertube.Channel('UC1', 'Alpha', 'https://yt3.ggpht.com/a=s176'),
+                          innertube.Channel('UC2', 'Beta', '')])
+
+    def test_they_are_asked_for_as_the_signed_in_vr_app(self):
+        innertube.get_subscribed_channels('de', 'DE', 'access-vr')
+        url, payload, headers = self.requests[0]
+        self.assertEqual((url, payload['browseId']), (innertube.BROWSE_URL, 'FEchannels'))
+        self.assertEqual(payload['context']['client']['clientName'], 'ANDROID_VR')
+        self.assertEqual(headers['Authorization'], 'Bearer access-vr')
+
+
+class SubscribeTest(BrowseTestCase):
+
+    def test_subscribing_posts_the_channel_with_the_buttons_params(self):
+        innertube.subscribe('UC1', 'de', 'DE', 'access-vr')
+        url, payload, headers = self.requests[0]
+        self.assertEqual(url, innertube.SUBSCRIBE_URL)
+        self.assertEqual((payload['channelIds'], payload['params']), (['UC1'], 'EgIIAhgA'))
+        self.assertEqual(payload['context']['client']['clientName'], 'ANDROID_VR')
+        self.assertEqual(headers['Authorization'], 'Bearer access-vr')
+
+    def test_unsubscribing_posts_the_channel_with_the_buttons_params(self):
+        innertube.unsubscribe('UC1', 'de', 'DE', 'access-vr')
+        url, payload, _ = self.requests[0]
+        self.assertEqual(url, innertube.UNSUBSCRIBE_URL)
+        self.assertEqual((payload['channelIds'], payload['params']), (['UC1'], 'CgIIAhgA'))
+
+
 def web_video(video_id):
     return {'richItemRenderer': {'content': {'videoRenderer': {
         'videoId': video_id, 'title': {'runs': [{'text': 'Stream ' + video_id}]}}}}}

@@ -97,9 +97,12 @@ in the profile directory and survive restarts.
 ### Subscriptions in context menus
 
 Every video offers to subscribe to or unsubscribe from its channel, so every
-video listing needs to know the subscriptions. `subscriptions.py` caches them
-in the profile directory, as channel id to subscription id - unsubscribing
-takes the latter. Listing the subscriptions, subscribing and unsubscribing
+video listing needs to know the subscriptions. They come from InnerTube, the
+feed `FEchannels` browsed as the Quest app, and `subscriptions.py` caches
+their channel ids in the profile directory. Subscribing and unsubscribing go
+to InnerTube's `subscription/subscribe` and `subscription/unsubscribe`, with
+the `params` of a channel page's buttons: without them YouTube answers alright
+but changes nothing. Listing the subscriptions, subscribing and unsubscribing
 update the cache, otherwise it is fetched again after an hour. Signing out
 deletes it along with the tokens. After a change the listing is refreshed,
 since its context menus were built with the old state - except after
@@ -127,11 +130,10 @@ subscriptions.
 ## YouTube Data API
 
 `dataapi.py` wraps the calls; each notes its quota cost. A project gets
-10,000 units a day. Opening the subscriptions costs 1 unit per 50 channels,
-all subscriptions 1 unit per channel and 2 more, opening a channel 4 units,
-a category of trending videos 2, the likes 2, a search 101, subscribing or
-unsubscribing 50. Finding the trending categories costs one unit per
-category once a day.
+10,000 units a day. All subscriptions cost 1 unit per channel and 2 more,
+opening a channel 4 units, a category of trending videos 2, the likes 2, a
+search 101. Finding the trending categories costs one unit per category once
+a day.
 
 A video costs the same whichever parts of it are asked for, so the listings
 take its `statistics` too: the numbers of views and likes head its plot,

@@ -9,9 +9,9 @@
 """The channels the account subscribed to, cached for the context menus.
 
 Every video listing needs them, to offer subscribing to or unsubscribing from
-a video's channel. The cache maps channel ids to subscription ids, which
-unsubscribing takes. Listing the subscriptions, subscribing and unsubscribing
-bring it up to date; otherwise it is fetched again after MAX_AGE_SECONDS.
+a video's channel. Listing the subscriptions, subscribing and unsubscribing
+bring the cache up to date; otherwise it is fetched again after
+MAX_AGE_SECONDS.
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -20,6 +20,7 @@ import time
 from . import account
 from . import addon
 from . import dataapi
+from . import innertube
 
 MAX_AGE_SECONDS = 3600
 
@@ -27,22 +28,24 @@ MAX_AGE_SECONDS = 3600
 PARALLEL_CHANNELS = 16
 
 
-def list_channels(auth):
+def list_channels(access_token):
     """Return the subscribed channels, freshly from YouTube."""
-    channels = dataapi.subscriptions(auth=auth)
-    _save({channel.channel_id: channel.subscription_id for channel in channels})
+    channels = innertube.get_subscribed_channels(addon.language(), addon.region(), access_token)
+    _save([channel.channel_id for channel in channels])
     return channels
 
 
-def subscription_ids(auth):
-    """Return the subscription ids by channel id, from the cache while it is recent."""
+def channel_ids(access_token):
+    """Return the ids of the subscribed channels, from the cache while it is recent."""
     cache = _load()
-    if cache is not None and time.time() - cache['saved_at'] < MAX_AGE_SECONDS:
-        return cache['channels']
-    return _fresh_ids(auth)
+    # Older versions of the add-on cached subscription ids instead.
+    if (cache is not None and 'channel_ids' in cache
+            and time.time() - cache['saved_at'] < MAX_AGE_SECONDS):
+        return cache['channel_ids']
+    return [channel.channel_id for channel in list_channels(access_token)]
 
 
-def latest_video_ids(count, auth):
+def latest_video_ids(count, access_token, auth):
     """Return the ids of the newest videos of all subscribed channels, the newest first.
 
     1 unit per channel.
@@ -50,28 +53,20 @@ def latest_video_ids(count, auth):
     with ThreadPoolExecutor(PARALLEL_CHANNELS) as pool:
         uploads = [upload for channel in pool.map(
             lambda channel_id: dataapi.channel_uploads(channel_id, dataapi.PAGE_SIZE, auth=auth),
-            subscription_ids(auth)) for upload in channel]
+            channel_ids(access_token)) for upload in channel]
     return [video_id for _, video_id in sorted(uploads, reverse=True)[:count]]
 
 
-def subscribe(channel_id, auth):
-    ids = subscription_ids(auth)
-    ids[channel_id] = dataapi.subscribe(channel_id, auth=auth)
-    _save(ids)
+def subscribe(channel_id, access_token):
+    ids = channel_ids(access_token)
+    innertube.subscribe(channel_id, addon.language(), addon.region(), access_token)
+    _save([subscribed for subscribed in ids if subscribed != channel_id] + [channel_id])
 
 
-def unsubscribe(channel_id, auth):
-    ids = subscription_ids(auth)
-    if channel_id not in ids:
-        # Subscribed on another device since the cache was saved.
-        ids = _fresh_ids(auth)
-    if channel_id in ids:
-        dataapi.unsubscribe(ids.pop(channel_id), auth=auth)
-        _save(ids)
-
-
-def _fresh_ids(auth):
-    return {channel.channel_id: channel.subscription_id for channel in list_channels(auth)}
+def unsubscribe(channel_id, access_token):
+    ids = channel_ids(access_token)
+    innertube.unsubscribe(channel_id, addon.language(), addon.region(), access_token)
+    _save([subscribed for subscribed in ids if subscribed != channel_id])
 
 
 def _load():
@@ -80,4 +75,4 @@ def _load():
 
 def _save(ids):
     addon.save_json(addon.profile_path(account.SUBSCRIPTIONS_FILE),
-                    {'saved_at': time.time(), 'channels': ids})
+                    {'saved_at': time.time(), 'channel_ids': ids})

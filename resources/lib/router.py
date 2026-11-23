@@ -86,7 +86,11 @@ class Router:
 
     def _list_subscriptions(self):
         """Show the newest videos of the subscriptions, then the subscribed channels."""
-        channels = self._query_data_api(subscriptions.list_channels, need_account=True)
+        access_token = self._feed_token()
+        if access_token is None:
+            return
+        channels = self._query_data_api(lambda auth: subscriptions.list_channels(access_token),
+                                        need_account=True)
         if channels is None:
             return
 
@@ -98,8 +102,11 @@ class Router:
 
     def _list_latest(self):
         """Show the newest videos of all subscribed channels, the newest first."""
+        access_token = self._feed_token()
+        if access_token is None:
+            return
         self._list_videos(lambda auth: dataapi.videos(
-            subscriptions.latest_video_ids(VIDEO_COUNT, auth), auth=auth),
+            subscriptions.latest_video_ids(VIDEO_COUNT, access_token, auth), auth=auth),
             listing.breadcrumb(addon.localize(30200), addon.localize(30205)), need_account=True,
             by_date=True)
 
@@ -109,9 +116,8 @@ class Router:
         title = self._params.get('title', '')
 
         def query(auth):
-            subscribed = None
-            if auth.token:
-                subscribed = channel_id in subscriptions.subscription_ids(auth)
+            ids = self._subscribed_channel_ids()
+            subscribed = None if ids is None else channel_id in ids
             videos = dataapi.channel_videos(channel_id, VIDEO_COUNT, auth=auth)
             return videos, subscribed, self._likes(videos)
 
@@ -267,7 +273,7 @@ class Router:
         message and Kodi stays where it is. by_date starts the listing newest first.
         """
         def videos_and_account(auth):
-            ids = subscriptions.subscription_ids(auth) if auth.token else None
+            ids = self._subscribed_channel_ids()
             videos = query(auth)
             return videos, ids, self._likes(videos)
 
@@ -289,6 +295,12 @@ class Router:
                                                   percent_watched=progress.get(video.video_id))
                                for video in videos],
                               category, by_date=by_date)
+
+    @staticmethod
+    def _subscribed_channel_ids():
+        """Return the ids of the channels the account subscribed to, None if not signed in."""
+        access_token = account.access_token(account.VR)
+        return None if access_token is None else subscriptions.channel_ids(access_token)
 
     @staticmethod
     def _likes(videos):
@@ -369,9 +381,13 @@ class Router:
     def _change_subscription(self, change, done_label_id):
         """Apply the change and report it. Returns whether it succeeded."""
         channel_id = self._params.get('channel', '')
+        access_token = account.access_token(account.VR)
+        if access_token is None:
+            self._fail(addon.localize(30105), listing_route=False)
+            return False
 
         def changed(auth):
-            change(channel_id, auth=auth)
+            change(channel_id, access_token)
             return True
 
         if not self._query_data_api(changed, need_account=True, listing_route=False):

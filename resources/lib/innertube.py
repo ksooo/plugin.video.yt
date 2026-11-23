@@ -25,12 +25,21 @@ BROWSE_URL = 'https://www.youtube.com/youtubei/v1/browse?prettyPrint=false'
 FEEDBACK_URL = 'https://www.youtube.com/youtubei/v1/feedback?prettyPrint=false'
 LIKE_URL = 'https://www.youtube.com/youtubei/v1/like/like?prettyPrint=false'
 REMOVE_LIKE_URL = 'https://www.youtube.com/youtubei/v1/like/removelike?prettyPrint=false'
+SUBSCRIBE_URL = 'https://www.youtube.com/youtubei/v1/subscription/subscribe?prettyPrint=false'
+UNSUBSCRIBE_URL = 'https://www.youtube.com/youtubei/v1/subscription/unsubscribe?prettyPrint=false'
 
 #: Browse ids of the account's feeds.
 RECOMMENDATIONS = 'FEwhat_to_watch'
 HISTORY = 'FEhistory'
 #: The playlist of the videos the account liked.
 LIKED_VIDEOS = 'VLLL'
+#: The channels the account subscribed to.
+SUBSCRIBED_CHANNELS = 'FEchannels'
+
+#: The params of a channel page's buttons to subscribe and to unsubscribe.
+#: Without them YouTube answers alright, but changes nothing.
+_SUBSCRIBE_PARAMS = 'EgIIAhgA'
+_UNSUBSCRIBE_PARAMS = 'CgIIAhgA'
 
 #: YouTube's live channel, and the params of its tabs of the streams live now,
 #: upcoming and recently ended.
@@ -116,6 +125,9 @@ Player = collections.namedtuple('Player', 'response client')
 
 #: A row of videos of a feed, such as "Recently uploaded" in the recommendations.
 Shelf = collections.namedtuple('Shelf', 'title video_ids')
+
+#: A channel the account subscribed to.
+Channel = collections.namedtuple('Channel', 'channel_id title thumbnail')
 
 _CPN_ALPHABET = string.ascii_letters + string.digits + '-_'
 
@@ -226,17 +238,11 @@ def get_liked_video_ids(language, region, access_token):
     token of the account ANDROID_VR accepts.
     """
     video_ids = []
-    fields = {'browseId': LIKED_VIDEOS}
-    while True:
-        response = _post_signed_in(BROWSE_URL, fields, language, region, access_token)
-        for video in _renderers(response, 'playlistVideoRenderer'):
-            if 'videoId' in video and video['videoId'] not in video_ids:
-                video_ids.append(video['videoId'])
-        continuation = next((data.get('continuation')
-                             for data in _renderers(response, 'nextContinuationData')), None)
-        if not continuation:
-            return video_ids
-        fields = {'continuation': continuation}
+    for video in _all_pages(LIKED_VIDEOS, 'playlistVideoRenderer', language, region,
+                            access_token):
+        if 'videoId' in video and video['videoId'] not in video_ids:
+            video_ids.append(video['videoId'])
+    return video_ids
 
 
 def like(video_id, language, region, access_token):
@@ -250,6 +256,30 @@ def remove_like(video_id, language, region, access_token):
     ANDROID_VR accepts."""
     _post_signed_in(REMOVE_LIKE_URL, {'target': {'videoId': video_id}}, language, region,
                     access_token)
+
+
+def get_subscribed_channels(language, region, access_token):
+    """Return the channels the account subscribed to, in YouTube's order.
+
+    access_token is the token of the account ANDROID_VR accepts.
+    """
+    return [Channel(channel['channelId'], text(channel.get('title')), _thumbnail(channel))
+            for channel in _all_pages(SUBSCRIBED_CHANNELS, 'compactChannelRenderer', language,
+                                      region, access_token)
+            if 'channelId' in channel]
+
+
+def subscribe(channel_id, language, region, access_token):
+    """Subscribe to the channel. access_token is the token of the account ANDROID_VR accepts."""
+    _post_signed_in(SUBSCRIBE_URL, {'channelIds': [channel_id], 'params': _SUBSCRIBE_PARAMS},
+                    language, region, access_token)
+
+
+def unsubscribe(channel_id, language, region, access_token):
+    """End the subscription of the channel. access_token is the token of the account
+    ANDROID_VR accepts."""
+    _post_signed_in(UNSUBSCRIBE_URL, {'channelIds': [channel_id], 'params': _UNSUBSCRIBE_PARAMS},
+                    language, region, access_token)
 
 
 def get_signed_in_player(video_id, language, region, access_token):
@@ -297,6 +327,20 @@ def _browse(browse_id, language, region, access_token):
         sections.extend(tab.get('tabRenderer', {}).get('content', {}).get(
             'sectionListRenderer', {}).get('contents', []))
     return sections
+
+
+def _all_pages(browse_id, name, language, region, access_token):
+    """Yield every renderer of the given name on all pages of one of the signed-in account's
+    feeds, which YouTube hands out one after the other."""
+    fields = {'browseId': browse_id}
+    while True:
+        response = _post_signed_in(BROWSE_URL, fields, language, region, access_token)
+        yield from _renderers(response, name)
+        continuation = next((data.get('continuation')
+                             for data in _renderers(response, 'nextContinuationData')), None)
+        if not continuation:
+            return
+        fields = {'continuation': continuation}
 
 
 def _post_signed_in(url, fields, language, region, access_token):
@@ -372,6 +416,15 @@ def _shelf(section):
     if not video_ids:
         return None
     return Shelf(text(renderer.get('title')), video_ids)
+
+
+def _thumbnail(renderer):
+    """Return the URL of the largest thumbnail of a renderer, '' if it has none."""
+    thumbnails = renderer.get('thumbnail', {}).get('thumbnails', [])
+    if not thumbnails:
+        return ''
+    url = thumbnails[-1].get('url', '')
+    return 'https:' + url if url.startswith('//') else url
 
 
 def text(node):
