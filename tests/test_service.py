@@ -221,3 +221,35 @@ class ServiceTest(AddonTestCase):
         self.play_count(0)
         self.assertEqual(self.errors(),
                          ['[plugin.video.yt] timed out from https://www.youtube.com/'])
+
+
+class AccountNameTest(AddonTestCase):
+
+    def setUp(self):
+        super().setUp()
+        support.store_tokens(vr=tokens('vr'))
+        support.ABORT_REQUESTED[0] = True
+        self.names_asked = []
+        patcher = mock.patch.object(innertube, 'get_account_name', self._get_account_name)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _get_account_name(self, language, region, access_token):
+        self.names_asked.append(access_token)
+        return 'Kai Sommerfeld'
+
+    def test_the_name_of_an_account_signed_in_before_it_was_shown_is_fetched_at_start(self):
+        service.run()
+        self.assertEqual(self.names_asked, ['access-vr'])
+        self.assertEqual(support.SETTINGS['account_name'], 'Kai Sommerfeld')
+
+    def test_a_known_name_is_not_fetched_again(self):
+        support.SETTINGS['account_name'] = 'Kai Sommerfeld'
+        service.run()
+        self.assertEqual(self.names_asked, [])
+
+    def test_without_sign_in_nothing_is_fetched(self):
+        support.reset()
+        support.ABORT_REQUESTED[0] = True
+        service.run()
+        self.assertEqual(self.names_asked, [])

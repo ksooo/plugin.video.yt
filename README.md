@@ -109,7 +109,7 @@ works without it, and so does playing a video by its URL,
 For your subscriptions, recommendations, history and likes, choose **Sign in** as well and enter
 the code it shows on a phone or computer. That grants YouTube's app for Meta Quest access to your
 account, whose identity the add-on uses for everything concerning the account and to play
-age-restricted videos. **Sign out** revokes it.
+age-restricted videos. The settings then show the account signed in to. **Sign out** revokes it.
 
 ## Trademark
 

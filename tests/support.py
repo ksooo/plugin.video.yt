@@ -39,6 +39,7 @@ ABORT_REQUESTED = [False]
 DEFAULT_SETTINGS = {
     'api_key': '',
     'signed_in': False,
+    'account_name': '',
     'video_codecs': ['vp9', 'avc1'],
     'offer_auto_dubs': True,
     'sync_playback': False,
@@ -128,6 +129,9 @@ class Settings:
         return SETTINGS[setting_id]
 
     def setBool(self, setting_id, value):
+        SETTINGS[setting_id] = value
+
+    def setString(self, setting_id, value):
         SETTINGS[setting_id] = value
 
 

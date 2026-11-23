@@ -25,6 +25,7 @@ ADDON_ICON = ADDON.getAddonInfo('icon')
 # Setting identifiers, must match resources/settings.xml.
 SETTING_API_KEY = 'api_key'
 SETTING_SIGNED_IN = 'signed_in'
+SETTING_ACCOUNT_NAME = 'account_name'
 SETTING_VIDEO_CODECS = 'video_codecs'
 SETTING_OFFER_AUTO_DUBS = 'offer_auto_dubs'
 SETTING_SYNC_PLAYBACK = 'sync_playback'
@@ -75,6 +76,11 @@ def get_string_list_setting(setting_id):
 def set_bool_setting(setting_id, value):
     """Change a boolean setting."""
     ADDON.getSettings().setBool(setting_id, value)
+
+
+def set_string_setting(setting_id, value):
+    """Change a text setting."""
+    ADDON.getSettings().setString(setting_id, value)
 
 
 def profile_path(file_name):

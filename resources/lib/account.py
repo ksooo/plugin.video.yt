@@ -22,6 +22,7 @@ import xbmcgui
 from . import addon
 from . import feeds
 from . import http
+from . import innertube
 from . import oauth
 
 TOKENS_FILE = 'tokens.json'
@@ -58,6 +59,7 @@ def sign_in():
 
     _save({VR: tokens})
     addon.set_bool_setting(addon.SETTING_SIGNED_IN, True)
+    update_name()
     addon.notify(addon.localize(30120))
 
 
@@ -66,6 +68,19 @@ def sign_out():
     _revoke(_load())
     _forget()
     addon.notify(addon.localize(30121))
+
+
+def update_name():
+    """Fetch the account's name for the settings to show."""
+    token = access_token(VR)
+    if token is None:
+        return
+    try:
+        name = innertube.get_account_name(addon.language(), addon.region(), token)
+    except http.RequestError as error:
+        addon.log_error('fetching the account name failed: {}'.format(error))
+        return
+    addon.set_string_setting(addon.SETTING_ACCOUNT_NAME, name)
 
 
 def is_signed_in():
@@ -158,3 +173,4 @@ def _forget():
         except FileNotFoundError:
             pass
     addon.set_bool_setting(addon.SETTING_SIGNED_IN, False)
+    addon.set_string_setting(addon.SETTING_ACCOUNT_NAME, '')

@@ -160,9 +160,11 @@ revoking it.
 
 The tokens live in `tokens.json` in the profile directory, never in the
 settings. The hidden setting `signed_in` only mirrors whether that file holds
-a sign-in, so the settings dialogue can enable the right button. When Google
-refuses to renew a token - the user revoked the access - the add-on signs out
-and says so.
+a sign-in, so the settings dialogue can enable the right button. The
+read-only setting `account_name` shows the account's name from InnerTube's
+`account/accounts_list`: fetched on signing in, and by the service on Kodi's
+start for a sign-in that has none yet. When Google refuses to renew a token -
+the user revoked the access - the add-on signs out and says so.
 
 Signing out also forgets what is kept of the account besides the tokens: the
 subscriptions and likes, and the recommendations and watch progress in

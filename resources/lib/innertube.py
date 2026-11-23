@@ -27,6 +27,7 @@ LIKE_URL = 'https://www.youtube.com/youtubei/v1/like/like?prettyPrint=false'
 REMOVE_LIKE_URL = 'https://www.youtube.com/youtubei/v1/like/removelike?prettyPrint=false'
 SUBSCRIBE_URL = 'https://www.youtube.com/youtubei/v1/subscription/subscribe?prettyPrint=false'
 UNSUBSCRIBE_URL = 'https://www.youtube.com/youtubei/v1/subscription/unsubscribe?prettyPrint=false'
+ACCOUNTS_URL = 'https://www.youtube.com/youtubei/v1/account/accounts_list?prettyPrint=false'
 
 #: Browse ids of the account's feeds.
 RECOMMENDATIONS = 'FEwhat_to_watch'
@@ -280,6 +281,23 @@ def unsubscribe(channel_id, language, region, access_token):
     ANDROID_VR accepts."""
     _post_signed_in(UNSUBSCRIBE_URL, {'channelIds': [channel_id], 'params': _UNSUBSCRIBE_PARAMS},
                     language, region, access_token)
+
+
+def get_account_name(language, region, access_token):
+    """Return the name of the signed-in account, with its handle if it has a channel.
+
+    '' if YouTube names none. access_token is the token of the account
+    ANDROID_VR accepts.
+    """
+    response = _post_signed_in(ACCOUNTS_URL, {}, language, region, access_token)
+    accounts = sorted(_renderers(response, 'accountItem'),
+                      key=lambda item: not item.get('isSelected'))
+    if not accounts:
+        return ''
+    name = text(accounts[0].get('accountName'))
+    # Without a channel, the byline says so instead of naming a handle.
+    byline = text(accounts[0].get('accountByline'))
+    return '{} ({})'.format(name, byline) if byline.startswith('@') else name
 
 
 def get_signed_in_player(video_id, language, region, access_token):

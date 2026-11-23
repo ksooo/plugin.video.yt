@@ -15,6 +15,22 @@
         </setting>
       </group>
       <group id="2">
+        <setting id="account_name" type="string" label="30020" help="30021">
+          <level>0</level>
+          <default/>
+          <enable>false</enable>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <dependencies>
+            <dependency type="visible">
+              <condition setting="signed_in">true</condition>
+            </dependency>
+          </dependencies>
+          <control type="edit" format="string">
+            <heading>30020</heading>
+          </control>
+        </setting>
         <setting id="signin" type="action" label="30016" help="30017">
           <level>0</level>
           <data>RunPlugin(plugin://plugin.video.yt/signin)</data>

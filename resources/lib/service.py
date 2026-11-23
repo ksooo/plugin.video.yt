@@ -15,6 +15,9 @@ not announce them leave the service waiting.
 
 YouTube keeps the furthest position reported, so a smaller one only gets
 through after removing the video from the history.
+
+Starting with Kodi, the service also fetches the name of an account signed in
+to before the add-on showed it in the settings.
 """
 
 import json
@@ -122,6 +125,8 @@ class Service(xbmc.Monitor):
 
 
 def run():
+    if account.is_signed_in() and not addon.get_string_setting(addon.SETTING_ACCOUNT_NAME):
+        account.update_name()
     Service().run()
 
 

@@ -20,6 +20,7 @@ from tests.support import tokens
 from resources.lib import account
 from resources.lib import feeds
 from resources.lib import http
+from resources.lib import innertube
 from resources.lib import oauth
 
 
@@ -34,9 +35,12 @@ class AccountTestCase(AddonTestCase):
         # exception.
         self.authorize_results = [tokens('vr')]
         self.refresh_result = None
+        # The account's name YouTube gives, or an exception asking for it raises.
+        self.account_name = 'Kai Sommerfeld'
         for patcher in (mock.patch.object(oauth, 'authorize', self._authorize),
                         mock.patch.object(oauth, 'revoke', self.revoked.append),
-                        mock.patch.object(oauth, 'refresh', self._refresh)):
+                        mock.patch.object(oauth, 'refresh', self._refresh),
+                        mock.patch.object(innertube, 'get_account_name', self._get_account_name)):
             patcher.start()
             self.addCleanup(patcher.stop)
 
@@ -47,6 +51,11 @@ class AccountTestCase(AddonTestCase):
         if isinstance(result, Exception):
             raise result
         return result
+
+    def _get_account_name(self, language, region, access_token):
+        if isinstance(self.account_name, Exception):
+            raise self.account_name
+        return self.account_name
 
     def _refresh(self, client, refresh_token):
         self.refreshed.append((client, refresh_token))
@@ -85,6 +94,17 @@ class SignInTest(AccountTestCase):
         self.assertTrue(support.SETTINGS['signed_in'])
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30120')])
 
+    def test_the_settings_show_the_accounts_name(self):
+        self.dispatch('signin')
+        self.assertEqual(support.SETTINGS['account_name'], 'Kai Sommerfeld')
+
+    def test_without_the_name_the_sign_in_still_succeeds(self):
+        self.account_name = http.RequestError('timed out')
+        self.dispatch('signin')
+        self.assertTrue(support.SETTINGS['signed_in'])
+        self.assertEqual(support.SETTINGS['account_name'], '')
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30120')])
+
     def test_giving_up_keeps_nothing(self):
         self.authorize_results = [None]
         self.dispatch('signin')
@@ -114,8 +134,10 @@ class SignOutTest(AccountTestCase):
 
     def test_the_tokens_are_revoked_and_forgotten(self):
         support.store_tokens(vr=tokens('vr'))
+        support.SETTINGS['account_name'] = 'Kai Sommerfeld'
         self.dispatch('signout')
         self.assertEqual(self.revoked, ['refresh-vr'])
+        self.assertEqual(support.SETTINGS['account_name'], '')
         self.assertIsNone(self.stored_tokens())
         self.assertFalse(support.SETTINGS['signed_in'])
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30121')])

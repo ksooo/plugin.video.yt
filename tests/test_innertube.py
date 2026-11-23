@@ -429,6 +429,32 @@ class SubscribeTest(BrowseTestCase):
         self.assertEqual((payload['channelIds'], payload['params']), (['UC1'], 'CgIIAhgA'))
 
 
+def account_item(name, byline, selected):
+    return {'accountItem': {'accountName': {'runs': [{'text': name}]},
+                            'accountByline': {'runs': [{'text': byline}]},
+                            'isSelected': selected}}
+
+
+class AccountNameTest(BrowseTestCase):
+
+    def test_the_selected_account_is_named_with_its_handle(self):
+        self.response = {'actions': [account_item('Brand', '@brand', False),
+                                     account_item('Kai', '@kai', True)]}
+        self.assertEqual(innertube.get_account_name('de', 'DE', 'access-vr'), 'Kai (@kai)')
+
+    def test_an_account_without_channel_is_named_alone(self):
+        self.response = {'actions': [account_item('Kai Sommerfeld', 'Kein Kanal', True)]}
+        self.assertEqual(innertube.get_account_name('de', 'DE', 'access-vr'), 'Kai Sommerfeld')
+
+    def test_it_is_asked_for_as_the_signed_in_vr_app(self):
+        self.response = {}
+        self.assertEqual(innertube.get_account_name('de', 'DE', 'access-vr'), '')
+        url, payload, headers = self.requests[0]
+        self.assertEqual(url, innertube.ACCOUNTS_URL)
+        self.assertEqual(payload['context']['client']['clientName'], 'ANDROID_VR')
+        self.assertEqual(headers['Authorization'], 'Bearer access-vr')
+
+
 def web_video(video_id):
     return {'richItemRenderer': {'content': {'videoRenderer': {
         'videoId': video_id, 'title': {'runs': [{'text': 'Stream ' + video_id}]}}}}}
