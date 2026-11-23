@@ -55,13 +55,17 @@ class RecommendationsTest(FeedsTestCase):
         self.assertEqual(feeds.recommendation_shelf('Empfohlen', 'access-vr'), RECOMMENDED[0])
         self.assertEqual(len(self.browsed), 1)
 
-    def test_after_fifteen_minutes_the_shelves_are_fetched_anew(self):
+    def test_a_shelf_is_opened_as_last_listed_after_a_long_playback(self):
         with mock.patch.object(feeds.time, 'time', return_value=1000000):
             feeds.recommendation_shelves('access-vr')
         self.shelves[innertube.RECOMMENDATIONS] = [innertube.Shelf('Empfohlen', ['other'])]
-        with mock.patch.object(feeds.time, 'time', return_value=1000000 + 15 * 60):
+        with mock.patch.object(feeds.time, 'time', return_value=1000000 + 3 * 60 * 60):
             shelf = feeds.recommendation_shelf('Empfohlen', 'access-vr')
-        self.assertEqual(shelf.video_ids, ['other'])
+        self.assertEqual(shelf, RECOMMENDED[0])
+
+    def test_without_shelves_listed_they_are_fetched(self):
+        self.assertEqual(feeds.recommendation_shelf('Empfohlen', 'access-vr'), RECOMMENDED[0])
+        self.assertEqual(len(self.browsed), 1)
 
     def test_a_shelf_gone_meanwhile_is_none(self):
         feeds.recommendation_shelves('access-vr')

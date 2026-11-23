@@ -12,9 +12,9 @@ The Data API has neither, so InnerTube delivers the video ids; the details
 come from the Data API as everywhere else.
 
 The recommendations come in shelves that change with every request and have
-no id of their own. The shelves last listed are therefore kept for
-SHELVES_MAX_AGE_SECONDS in Kodi's temp directory, so that opening one shows
-what the list of shelves promised. A shelf is found by its title.
+no id of their own. The shelves last listed are therefore kept in Kodi's temp
+directory, so that opening one shows what the list of shelves promised, even
+after a long playback. A shelf is found by its title.
 
 How far the account watched the videos of its history is kept for
 PROGRESS_MAX_AGE_SECONDS as well, since every video listing needs it.
@@ -33,7 +33,6 @@ from . import addon
 from . import innertube
 
 SHELVES_FILE = 'recommendations.json'
-SHELVES_MAX_AGE_SECONDS = 15 * 60
 
 PROGRESS_FILE = 'watch-progress.json'
 PROGRESS_MAX_AGE_SECONDS = 5 * 60
@@ -48,14 +47,14 @@ def recommendation_shelves(access_token):
     """Return the shelves of recommendations, freshly from YouTube."""
     shelves = innertube.get_shelves(innertube.RECOMMENDATIONS, addon.language(), addon.region(),
                                     access_token)
-    addon.save_json(addon.temp_path(SHELVES_FILE), {'saved_at': time.time(), 'shelves': shelves})
+    addon.save_json(addon.temp_path(SHELVES_FILE), {'shelves': shelves})
     return shelves
 
 
 def recommendation_shelf(title, access_token):
     """Return the shelf of recommendations with the title last listed, None if gone."""
     cache = addon.load_json(addon.temp_path(SHELVES_FILE), None)
-    if cache is not None and time.time() - cache['saved_at'] < SHELVES_MAX_AGE_SECONDS:
+    if cache is not None:
         shelves = [innertube.Shelf(*shelf) for shelf in cache['shelves']]
     else:
         shelves = recommendation_shelves(access_token)

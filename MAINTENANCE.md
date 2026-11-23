@@ -216,9 +216,9 @@ the Data API like everywhere else. If YouTube changes the layout of these
 responses, the folders turn up empty.
 
 The recommendations change with every request and their shelves have no id.
-`feeds.py` keeps the shelves last listed for 15 minutes in Kodi's temp
-directory and opens a shelf by its title from there, so it shows what the
-list promised.
+`feeds.py` keeps the shelves last listed in Kodi's temp directory and opens a
+shelf by its title from there, so it shows what the list promised, also when
+Kodi lists it again after a long playback.
 
 ### Syncing with the watch history
 
