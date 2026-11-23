@@ -1,3 +1,8 @@
+v1.4.0
+- Setting up is simpler: an API key is all it takes, no OAuth client of your own any more, and signing in needs a single code
+- The settings show which YouTube account the add-on is signed in to
+- Subscribing, unsubscribing and liking no longer use up the daily YouTube quota
+
 v1.3.2
 - Video lists open faster, "All subscriptions" about twice as fast
 
