@@ -21,8 +21,7 @@ import tests.support  # noqa: F401
 from resources.lib import dataapi
 
 
-USER = dataapi.Auth('access-user', 'key-1')
-KEY_ONLY = dataapi.Auth(None, 'key-1')
+AUTH = dataapi.Auth('key-1')
 
 
 def playlist_item(video_id, published=''):
@@ -77,27 +76,21 @@ class RequestTest(DataApiTestCase):
     def test_all_pages_are_collected(self):
         self.responses['videos'] = [{'items': [video('v1')], 'nextPageToken': 'p2'},
                                     {'items': [video('v2')]}]
-        videos = dataapi.most_popular('DE', None, 100, auth=USER)
+        videos = dataapi.most_popular('DE', None, 100, auth=AUTH)
         self.assertEqual([video.video_id for video in videos], ['v1', 'v2'])
         self.assertEqual([params.get('pageToken') for params in self.requested('videos')],
                          [None, 'p2'])
 
-    def test_the_account_is_authorized_by_its_token(self):
+    def test_the_api_key_authorizes_the_request(self):
         self.responses['videos'] = [{'items': []}]
-        dataapi.most_popular('DE', '10', 50, auth=USER)
-        self.assertEqual(self.requests[0][2], {'Authorization': 'Bearer access-user'})
-        self.assertNotIn('key', self.requests[0][1])
-
-    def test_without_an_account_the_api_key_is_used(self):
-        self.responses['videos'] = [{'items': []}]
-        dataapi.most_popular('DE', '10', 50, auth=KEY_ONLY)
+        dataapi.most_popular('DE', '10', 50, auth=AUTH)
         self.assertEqual(self.requests[0][2], {})
         self.assertEqual(self.requests[0][1]['key'], 'key-1')
 
     def test_a_refusal_carries_the_reason(self):
         self.responses['videos'] = [error('quotaExceeded')]
         with self.assertRaises(dataapi.DataApiError) as context:
-            dataapi.most_popular('DE', '10', 50, auth=USER)
+            dataapi.most_popular('DE', '10', 50, auth=AUTH)
         self.assertEqual(str(context.exception), 'quotaExceeded')
 
 
@@ -130,14 +123,14 @@ class ChannelVideosTest(DataApiTestCase):
 
     def test_the_videos_tab_playlist_is_read(self):
         self.responses['playlistItems'] = [{'items': []}]
-        dataapi.channel_videos('UCabcdef', 100, auth=USER)
+        dataapi.channel_videos('UCabcdef', 100, auth=AUTH)
         self.assertEqual(self.requested('playlistItems')[0]['playlistId'], 'UULFabcdef')
 
     def test_the_videos_come_with_details_in_playlist_order(self):
         self.responses['playlistItems'] = [{'items': [playlist_item('v2'), playlist_item('v1')]}]
         self.known_videos = {'v1': video('v1'), 'v2': video('v2')}
 
-        videos = dataapi.channel_videos('UCabc', 100, auth=USER)
+        videos = dataapi.channel_videos('UCabc', 100, auth=AUTH)
         self.assertEqual([video.video_id for video in videos], ['v2', 'v1'])
 
     def test_no_more_than_asked_for_are_fetched(self):
@@ -148,7 +141,7 @@ class ChannelVideosTest(DataApiTestCase):
         ]
         self.known_videos = {'v{}'.format(i): video('v{}'.format(i)) for i in range(100)}
 
-        videos = dataapi.channel_videos('UCabc', 60, auth=USER)
+        videos = dataapi.channel_videos('UCabc', 60, auth=AUTH)
         self.assertEqual(len(videos), 60)
         self.assertEqual(len(self.requested('playlistItems')), 2)
         self.assertEqual([len(params['id'].split(',')) for params in self.requested('videos')],
@@ -157,31 +150,31 @@ class ChannelVideosTest(DataApiTestCase):
     def test_the_uploads_come_with_their_publication(self):
         self.responses['playlistItems'] = [{'items': [playlist_item('v2', '2026-10-18T10:00:00Z'),
                                                       playlist_item('v1', '2026-10-17T10:00:00Z')]}]
-        self.assertEqual(dataapi.channel_uploads('UCabc', 50, auth=USER),
+        self.assertEqual(dataapi.channel_uploads('UCabc', 50, auth=AUTH),
                          [('2026-10-18T10:00:00Z', 'v2'), ('2026-10-17T10:00:00Z', 'v1')])
         self.assertEqual(self.requested('videos'), [])
 
     def test_vanished_videos_are_left_out(self):
         self.responses['playlistItems'] = [{'items': [playlist_item('v1'), playlist_item('gone')]}]
         self.known_videos = {'v1': video('v1')}
-        self.assertEqual([video.video_id for video in dataapi.channel_videos('UCabc', 100, USER)],
+        self.assertEqual([video.video_id for video in dataapi.channel_videos('UCabc', 100, AUTH)],
                          ['v1'])
 
     def test_a_channel_without_videos_has_none(self):
         self.responses['playlistItems'] = [error('playlistNotFound', code=404)]
-        self.assertEqual(dataapi.channel_videos('UCabc', 100, auth=USER), [])
+        self.assertEqual(dataapi.channel_videos('UCabc', 100, auth=AUTH), [])
 
     def test_other_refusals_are_passed_on(self):
         self.responses['playlistItems'] = [error('quotaExceeded')]
         with self.assertRaises(dataapi.DataApiError):
-            dataapi.channel_videos('UCabc', 100, auth=USER)
+            dataapi.channel_videos('UCabc', 100, auth=AUTH)
 
 
 class MostPopularTest(DataApiTestCase):
 
     def test_the_chart_of_the_regions_category_is_asked_for(self):
         self.responses['videos'] = [{'items': [video('v1'), video('v2')]}]
-        videos = dataapi.most_popular('DE', '10', 100, auth=USER)
+        videos = dataapi.most_popular('DE', '10', 100, auth=AUTH)
         self.assertEqual([video.video_id for video in videos], ['v1', 'v2'])
         params = self.requested('videos')[0]
         self.assertEqual((params['chart'], params['regionCode'], params['videoCategoryId']),
@@ -190,7 +183,7 @@ class MostPopularTest(DataApiTestCase):
     def test_a_category_without_chart_is_refused(self):
         self.responses['videos'] = [error('videoChartNotFound', code=404)]
         with self.assertRaises(dataapi.DataApiError) as context:
-            dataapi.most_popular('DE', '18', 1, auth=USER)
+            dataapi.most_popular('DE', '18', 1, auth=AUTH)
         self.assertEqual(str(context.exception), 'videoChartNotFound')
 
 
@@ -202,7 +195,7 @@ class VideoCategoriesTest(DataApiTestCase):
             {'id': '18', 'snippet': {'title': 'Kurzfilme', 'assignable': False}},
             {'id': '10', 'snippet': {'title': 'Musik', 'assignable': True}},
         ]}]
-        self.assertEqual(dataapi.video_categories('DE', 'de', auth=USER),
+        self.assertEqual(dataapi.video_categories('DE', 'de', auth=AUTH),
                          [dataapi.Category('1', 'Film & Animation'),
                           dataapi.Category('10', 'Musik')])
         params = self.requested('videoCategories')[0]
@@ -215,7 +208,7 @@ class SearchTest(DataApiTestCase):
         self.responses['search'] = [{'items': [{'id': {'videoId': 'v2'}},
                                                {'id': {'videoId': 'v1'}}]}]
         self.known_videos = {'v1': video('v1'), 'v2': video('v2')}
-        videos = dataapi.search('kodi', 'DE', 'de', 50, auth=USER)
+        videos = dataapi.search('kodi', 'DE', 'de', 50, auth=AUTH)
         self.assertEqual([video.video_id for video in videos], ['v2', 'v1'])
 
     def test_channels_and_playlists_mixed_in_are_skipped(self):
@@ -225,12 +218,12 @@ class SearchTest(DataApiTestCase):
             {'id': {'kind': 'youtube#playlist', 'playlistId': 'PL1'}},
         ]}]
         self.known_videos = {'v1': video('v1')}
-        videos = dataapi.search('kodi', 'DE', 'de', 50, auth=USER)
+        videos = dataapi.search('kodi', 'DE', 'de', 50, auth=AUTH)
         self.assertEqual([video.video_id for video in videos], ['v1'])
 
     def test_only_videos_are_searched_for_region_and_language(self):
         self.responses['search'] = [{'items': []}]
-        dataapi.search('kodi', 'AT', 'de', 50, auth=USER)
+        dataapi.search('kodi', 'AT', 'de', 50, auth=AUTH)
         params = self.requested('search')[0]
         self.assertEqual((params['q'], params['type'], params['regionCode'],
                           params['relevanceLanguage']), ('kodi', 'video', 'AT', 'de'))
@@ -238,7 +231,7 @@ class SearchTest(DataApiTestCase):
     def test_one_page_is_enough_for_fifty(self):
         self.responses['search'] = [{'items': [{'id': {'videoId': 'v{}'.format(i)}}
                                                for i in range(50)], 'nextPageToken': 'p2'}]
-        dataapi.search('kodi', '', '', 50, auth=USER)
+        dataapi.search('kodi', '', '', 50, auth=AUTH)
         self.assertEqual(len(self.requested('search')), 1)
 
 
@@ -246,7 +239,7 @@ class VideoDetailsTest(DataApiTestCase):
 
     def details(self, item):
         self.known_videos = {item['id']: item}
-        return dataapi.videos([item['id']], auth=USER)[0]
+        return dataapi.videos([item['id']], auth=AUTH)[0]
 
     def test_the_metadata_is_taken_over(self):
         details = self.details(video('v1', tags=['a', 'b']))
@@ -292,4 +285,4 @@ class PagesTest(DataApiTestCase):
             return answer(*args, **kwargs)
 
         with mock.patch.object(dataapi.http, 'request_json', request_json):
-            dataapi.videos(video_ids, auth=USER)
+            dataapi.videos(video_ids, auth=AUTH)

@@ -49,7 +49,8 @@ class BrowseTestCase(AddonTestCase):
 
     def setUp(self):
         super().setUp()
-        support.store_tokens(user=tokens('user'), vr=tokens('vr'))
+        support.store_tokens(vr=tokens('vr'))
+        support.SETTINGS['api_key'] = 'key-1'
         self.queries = []
         # Results of the data API calls by name, and an exception all of them
         # raise instead.
@@ -128,7 +129,7 @@ class BrowseTestCase(AddonTestCase):
 
     def _query(self, name):
         def query(*args, auth):
-            self.queries.append((name, args, auth.token or 'key:' + auth.api_key))
+            self.queries.append((name, args, auth.api_key))
             if self.failure is not None:
                 raise self.failure
             return self.results[name]
@@ -175,6 +176,11 @@ class BrowseTestCase(AddonTestCase):
 
 
 class RootTest(BrowseTestCase):
+
+    def test_without_api_key_only_the_accounts_folders_are_offered(self):
+        support.SETTINGS['api_key'] = ''
+        self.assertEqual(self.labels(self.dispatch()),
+                         ['L30200', 'L30400', 'L30401', 'L30704'])
 
     def test_everything_is_offered_when_signed_in(self):
         items = self.dispatch()
@@ -262,13 +268,13 @@ class LatestTest(BrowseTestCase):
         self.addCleanup(patcher.stop)
 
     def _channel_uploads(self, channel_id, count, auth):
-        self.asked.append((channel_id, count, auth.token))
+        self.asked.append((channel_id, count, auth.api_key))
         return self.uploads[channel_id]
 
     def test_the_newest_videos_of_all_subscribed_channels_come_newest_first(self):
         self.dispatch('subscriptions/latest')
-        self.assertEqual(sorted(self.asked), [('UC1', 50, 'access-user'),
-                                              ('UC2', 50, 'access-user')])
+        self.assertEqual(sorted(self.asked), [('UC1', 50, 'key-1'),
+                                              ('UC2', 50, 'key-1')])
         self.assertEqual(self.queried('videos'), [(['a5', 'b4', 'a3', 'b1'],)])
         self.assertEqual(support.PLUGIN_STATE['category'], 'L30200 / L30205')
 
@@ -330,7 +336,7 @@ class LiveTest(BrowseTestCase):
     def test_an_api_key_is_enough(self):
         self.sign_out(api_key='key-1')
         self.dispatch('live/streams', '?tab=now')
-        self.assertEqual(self.queries, [('videos', (['l1', 'l2'],), 'key:key-1')])
+        self.assertEqual(self.queries, [('videos', (['l1', 'l2'],), 'key-1')])
 
     def test_finding_none_is_reported_and_kodi_stays(self):
         self.live_ids = []
@@ -397,7 +403,7 @@ class ChannelTest(BrowseTestCase):
     def test_without_sign_in_it_is_listed_with_the_api_key_and_no_subscribing(self):
         self.sign_out(api_key='key-1')
         list_item = self.channel(parent='')[0][1]
-        self.assertEqual(self.queries, [('channel_videos', ('UC1', 100), 'key:key-1')])
+        self.assertEqual(self.queries, [('channel_videos', ('UC1', 100), 'key-1')])
         self.assertEqual(list_item.context_menu, [])
 
     def test_a_subscribed_channels_videos_offer_unsubscribing_only(self):
@@ -496,7 +502,7 @@ class TrendingTest(BrowseTestCase):
     def test_without_sign_in_the_api_key_is_used_and_nobody_subscribes(self):
         self.sign_out(api_key='key-1')
         list_item = self.category()[0][1]
-        self.assertEqual(self.queries, [('most_popular', ('US', '10', 100), 'key:key-1')])
+        self.assertEqual(self.queries, [('most_popular', ('US', '10', 100), 'key-1')])
         self.assertEqual(list_item.context_menu, [GO_TO_CHANNEL])
 
 
@@ -949,6 +955,12 @@ class RatingTest(BrowseTestCase):
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30105')])
         self.assertEqual(self.likings, [])
 
+    def test_liking_needs_no_api_key(self):
+        self.cache_likes([])
+        support.SETTINGS['api_key'] = ''
+        self.act('like')
+        self.assertEqual(self.likings, [('like', 'v1', 'access-vr')])
+
 
 class FailureTest(BrowseTestCase):
 
@@ -958,9 +970,15 @@ class FailureTest(BrowseTestCase):
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30105')])
         self.assertFalse(support.PLUGIN_STATE['succeeded'])
 
-    def test_without_sign_in_nor_api_key_the_user_is_told(self):
+    def test_without_api_key_the_user_is_told(self):
         self.sign_out()
         self.dispatch('trending')
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30106')])
+        self.assertFalse(support.PLUGIN_STATE['succeeded'])
+
+    def test_signed_in_without_api_key_the_user_is_told_too(self):
+        support.SETTINGS['api_key'] = ''
+        self.dispatch('likes')
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30106')])
         self.assertFalse(support.PLUGIN_STATE['succeeded'])
 

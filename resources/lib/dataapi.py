@@ -6,7 +6,8 @@
 #  SPDX-License-Identifier: GPL-2.0-or-later
 #  See LICENSE.txt for more information.
 #
-"""The YouTube Data API v3, the official API for everything but playback.
+"""The YouTube Data API v3, the official API, for the public data: videos,
+channels, trending and search.
 
 Every call costs quota, 10,000 units a day per Google Cloud project. The
 functions note what they cost.
@@ -26,9 +27,9 @@ API_URL = 'https://www.googleapis.com/youtube/v3/'
 #: The most items the API returns per request.
 PAGE_SIZE = 50
 
-#: How a request is authorized: by the access token of a signed-in account,
-#: or else by an API key. Whatever concerns the account itself needs the token.
-Auth = collections.namedtuple('Auth', 'token api_key')
+#: How a request is authorized: by the API key of the user's own Google Cloud
+#: project.
+Auth = collections.namedtuple('Auth', 'api_key')
 
 Category = collections.namedtuple('Category', 'category_id title')
 
@@ -196,13 +197,9 @@ def _per_page(video_ids, request):
 
 
 def _request(method, resource, params, auth, payload=None):
-    headers = {}
-    if auth.token:
-        headers['Authorization'] = 'Bearer ' + auth.token
-    else:
-        params = dict(params, key=auth.api_key)
+    params = dict(params, key=auth.api_key)
     response = http.request_json(method, '{}{}?{}'.format(API_URL, resource, urlencode(params)),
-                                 headers, payload)
+                                 {}, payload)
     error = response.get('error')
     if error is not None:
         errors = error.get('errors') or [{}]

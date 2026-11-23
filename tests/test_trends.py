@@ -18,7 +18,7 @@ from resources.lib import addon
 from resources.lib import dataapi
 from resources.lib import trends
 
-AUTH = dataapi.Auth('access-user', '')
+AUTH = dataapi.Auth('key-1')
 
 CATEGORIES = [dataapi.Category('10', 'Musik'), dataapi.Category('27', 'Bildung'),
               dataapi.Category('20', 'Gaming'), dataapi.Category('19', 'Reisen & Events')]

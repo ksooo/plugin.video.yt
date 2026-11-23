@@ -8,10 +8,9 @@
 #
 """The signed-in YouTube account: signing in and out, and the access tokens.
 
-Signing in grants access twice, to two OAuth clients: the user's own one for
-the YouTube Data API, and the one of YouTube's app for Meta Quest, whose
-player requests may fetch age-restricted videos. The tokens are kept in the
-profile directory, not in the settings.
+Signing in grants access to the OAuth client of YouTube's app for Meta Quest,
+whose identity the add-on uses for everything concerning the account. The
+tokens are kept in the profile directory, not in the settings.
 """
 
 import os
@@ -31,9 +30,11 @@ TOKENS_FILE = 'tokens.json'
 SUBSCRIPTIONS_FILE = 'subscriptions.json'
 LIKES_FILE = 'likes.json'
 
-#: Account keys used in the tokens file and by innertube.Client.account.
-USER = 'user'
+#: Account key used in the tokens file and by innertube.Client.account.
 VR = 'vr'
+#: The key of the user's own OAuth client, which older versions of the add-on
+#: signed in to as well.
+_USER = 'user'
 
 #: An access token this close to its expiry is renewed before use.
 EXPIRY_MARGIN_SECONDS = 60
@@ -42,38 +43,20 @@ EXPIRY_MARGIN_SECONDS = 60
 CANCEL_CHECK_SECONDS = 0.5
 
 
-def _own_client():
-    return oauth.Client(addon.get_string_setting(addon.SETTING_CLIENT_ID),
-                        addon.get_string_setting(addon.SETTING_CLIENT_SECRET))
-
-
-#: The sign-in steps: account key, OAuth client and what the access is for.
-_STEPS = (
-    (USER, _own_client, 30112),
-    (VR, lambda: oauth.YOUTUBE_VR, 30113),
-)
-
-
 def sign_in():
-    """Run through the sign-in steps and keep the tokens if all of them succeed."""
-    tokens = {}
-    for number, (key, client, purpose_id) in enumerate(_STEPS, start=1):
-        try:
-            result = _authorize(client(), addon.localize(30110).format(number, len(_STEPS)),
-                                addon.localize(purpose_id))
-        except (oauth.OAuthError, http.RequestError) as error:
-            addon.log_error('sign-in failed: {}'.format(error))
-            _revoke(tokens)
-            addon.notify(addon.localize(30122))
-            return
+    """Grant YouTube's app for Meta Quest access and keep the tokens if that succeeds."""
+    try:
+        tokens = _authorize(oauth.YOUTUBE_VR, addon.localize(30016), addon.localize(30113))
+    except (oauth.OAuthError, http.RequestError) as error:
+        addon.log_error('sign-in failed: {}'.format(error))
+        addon.notify(addon.localize(30122))
+        return
 
-        if result is None:
-            addon.log('sign-in cancelled')
-            _revoke(tokens)
-            return
-        tokens[key] = result
+    if tokens is None:
+        addon.log('sign-in cancelled')
+        return
 
-    _save(tokens)
+    _save({VR: tokens})
     addon.set_bool_setting(addon.SETTING_SIGNED_IN, True)
     addon.notify(addon.localize(30120))
 
@@ -86,14 +69,14 @@ def sign_out():
 
 
 def is_signed_in():
-    return USER in _load()
+    return VR in _load()
 
 
 def access_token(key):
     """Return a valid access token of the account, or None when not signed in.
 
     An expired token is renewed. If Google refuses that - the user revoked the
-    access, or the OAuth client in the settings changed - the add-on signs out.
+    access - the add-on signs out.
     """
     all_tokens = _load()
     tokens = all_tokens.get(key)
@@ -102,9 +85,8 @@ def access_token(key):
     if tokens['expires_at'] - EXPIRY_MARGIN_SECONDS > time.time():
         return tokens['access_token']
 
-    client = _own_client() if key == USER else oauth.YOUTUBE_VR
     try:
-        all_tokens[key] = oauth.refresh(client, tokens['refresh_token'])
+        all_tokens[key] = oauth.refresh(oauth.YOUTUBE_VR, tokens['refresh_token'])
     except oauth.OAuthError as error:
         addon.log_error('renewing the {} token failed: {}'.format(key, error))
         _forget()
@@ -155,7 +137,10 @@ def _revoke(all_tokens):
 
 
 def _load():
-    return addon.load_json(addon.profile_path(TOKENS_FILE), {})
+    tokens = addon.load_json(addon.profile_path(TOKENS_FILE), {})
+    if tokens.pop(_USER, None) is not None:
+        _save(tokens)
+    return tokens
 
 
 def _save(tokens):

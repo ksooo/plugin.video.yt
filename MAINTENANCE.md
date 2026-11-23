@@ -139,30 +139,30 @@ A video costs the same whichever parts of it are asked for, so the listings
 take its `statistics` too: the numbers of views and likes head its plot,
 unless the uploader hides them or they are 0.
 
-A signed-in account's token authorizes every request, for its own data as
-for public data. Without a sign-in, the API key does for the public data -
-trending, search, channels. The API reports errors as JSON with a `reason`
-such as `quotaExceeded`, which the add-on turns into a notification; a used
-up quota names the time it starts anew, midnight Pacific Time
-(`dataapi.quota_reset()`).
+The API key authorizes every request; the add-on asks the Data API for
+public data only. The API reports errors as JSON with a `reason` such as
+`quotaExceeded`, which the add-on turns into a notification; a used up quota
+names the time it starts anew, midnight Pacific Time (`dataapi.quota_reset()`).
 
 ## Signing in
 
 `oauth.py` implements Google's OAuth flow for limited-input devices; signing
-in runs it twice (`account.py`):
+in (`account.py`) runs it with the OAuth client of YouTube's app for Meta
+Quest, `oauth.YOUTUBE_VR`. YouTube accepts a token only from the app it was
+issued for, and the Quest app is the one that plays age-restricted videos
+when signed in; InnerTube serves it the account's feeds, likes and
+subscriptions too. Should YouTube ever retire that client, signing in fails
+with `invalid_client` in the log.
 
-1. With the user's own OAuth client, for the YouTube Data API.
-2. With the OAuth client of YouTube's app for Meta Quest, `oauth.YOUTUBE_VR`.
-   YouTube accepts a token only from the app it was issued for, and the
-   Quest app is the one that plays age-restricted videos when signed in.
-   Should YouTube ever retire that client, signing in fails at step 2 with
-   `invalid_client` in the log.
+Older versions of the add-on signed in to the user's own OAuth client as
+well, for the Data API. `account.py` forgets such a token on sight, without
+revoking it.
 
 The tokens live in `tokens.json` in the profile directory, never in the
 settings. The hidden setting `signed_in` only mirrors whether that file holds
 a sign-in, so the settings dialogue can enable the right button. When Google
-refuses to renew a token - the user revoked the access, or changed the client
-in the settings - the add-on signs out and says so.
+refuses to renew a token - the user revoked the access - the add-on signs out
+and says so.
 
 Signing out also forgets what is kept of the account besides the tokens: the
 subscriptions and likes, and the recommendations and watch progress in

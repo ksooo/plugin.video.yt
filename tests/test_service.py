@@ -37,7 +37,7 @@ class ServiceTest(AddonTestCase):
 
     def setUp(self):
         super().setUp()
-        support.store_tokens(user=tokens('user'), vr=tokens('vr'))
+        support.store_tokens(vr=tokens('vr'))
         support.SETTINGS['sync_playback'] = True
         # What reached YouTube, in order: ('remove', video id) and
         # ('report', start, end, state).

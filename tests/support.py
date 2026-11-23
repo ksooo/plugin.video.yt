@@ -38,8 +38,6 @@ LANGUAGE = ['de']
 ABORT_REQUESTED = [False]
 DEFAULT_SETTINGS = {
     'api_key': '',
-    'client_id': '',
-    'client_secret': '',
     'signed_in': False,
     'video_codecs': ['vp9', 'avc1'],
     'offer_auto_dubs': True,

@@ -75,7 +75,7 @@ class Router:
         if signed_in:
             items.append(listing.folder_item(addon.localize(30200), 'subscriptions'))
             items.append(listing.folder_item(addon.localize(30400), 'recommended'))
-        if signed_in or addon.get_string_setting(addon.SETTING_API_KEY):
+        if addon.get_string_setting(addon.SETTING_API_KEY):
             items.append(listing.folder_item(addon.localize(30300), 'trending'))
             items.append(listing.folder_item(addon.localize(30600), 'live'))
             items.append(listing.folder_item(addon.localize(30301), 'search'))
@@ -381,16 +381,7 @@ class Router:
     def _change_subscription(self, change, done_label_id):
         """Apply the change and report it. Returns whether it succeeded."""
         channel_id = self._params.get('channel', '')
-        access_token = account.access_token(account.VR)
-        if access_token is None:
-            self._fail(addon.localize(30105), listing_route=False)
-            return False
-
-        def changed(auth):
-            change(channel_id, access_token)
-            return True
-
-        if not self._query_data_api(changed, need_account=True, listing_route=False):
+        if not self._act_for_account(lambda access_token: change(channel_id, access_token)):
             return False
 
         addon.notify(addon.localize(done_label_id).format(self._params.get('title', '')))
@@ -399,16 +390,9 @@ class Router:
     def _rate(self):
         """Like a video or take the like back, run from a context menu. Parameters: v, rating."""
         like = self._params.get('rating') == 'like'
-        access_token = account.access_token(account.VR)
-        if access_token is None:
-            self._fail(addon.localize(30105), listing_route=False)
-            return
-
-        def rated(auth):
-            (likes.like if like else likes.remove_like)(self._params.get('v', ''), access_token)
-            return True
-
-        if self._query_data_api(rated, need_account=True, listing_route=False):
+        rate = likes.like if like else likes.remove_like
+        if self._act_for_account(lambda access_token: rate(self._params.get('v', ''),
+                                                           access_token)):
             addon.notify(addon.localize(30702 if like else 30703))
             # The context menus of the listing have to follow.
             xbmc.executebuiltin('Container.Refresh')
@@ -425,22 +409,38 @@ class Router:
         """Sign out of YouTube, run from the settings."""
         account.sign_out()
 
+    def _act_for_account(self, action):
+        """Run action(access_token) for the signed-in account. Returns whether it succeeded,
+        after telling the user if not."""
+        access_token = account.access_token(account.VR)
+        if access_token is None:
+            self._fail(addon.localize(30105), listing_route=False)
+            return False
+        try:
+            action(access_token)
+        except http.RequestError as error:
+            addon.log_error(str(error))
+            self._fail(addon.localize(30101), listing_route=False)
+            return False
+        return True
+
     # -- data API -----------------------------------------------------------
 
     def _query_data_api(self, query, need_account=False, listing_route=True):
         """Run query(auth) and return its result.
 
-        The query runs on behalf of the signed-in account, else - unless it
-        needs the account - with the API key. Returns None if that fails,
-        after telling the user and, for a listing, Kodi.
+        The query runs with the API key; need_account asks for a sign-in too.
+        Returns None if that fails, after telling the user and, for a listing,
+        Kodi.
         """
-        token = account.access_token(account.USER) if account.is_signed_in() else None
+        if need_account and not account.is_signed_in():
+            return self._fail(addon.localize(30105), listing_route)
         api_key = addon.get_string_setting(addon.SETTING_API_KEY)
-        if token is None and (need_account or not api_key):
-            return self._fail(addon.localize(30105 if need_account else 30106), listing_route)
+        if not api_key:
+            return self._fail(addon.localize(30106), listing_route)
 
         try:
-            return query(dataapi.Auth(token, api_key))
+            return query(dataapi.Auth(api_key))
         except dataapi.DataApiError as error:
             addon.log_error('YouTube Data API: {}'.format(error))
             if str(error) == 'quotaExceeded':

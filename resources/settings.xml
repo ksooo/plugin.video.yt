@@ -13,27 +13,6 @@
             <heading>30010</heading>
           </control>
         </setting>
-        <setting id="client_id" type="string" label="30012" help="30013">
-          <level>0</level>
-          <default/>
-          <constraints>
-            <allowempty>true</allowempty>
-          </constraints>
-          <control type="edit" format="string">
-            <heading>30012</heading>
-          </control>
-        </setting>
-        <setting id="client_secret" type="string" label="30014" help="30015">
-          <level>0</level>
-          <default/>
-          <constraints>
-            <allowempty>true</allowempty>
-          </constraints>
-          <control type="edit" format="string">
-            <heading>30014</heading>
-            <hidden>true</hidden>
-          </control>
-        </setting>
       </group>
       <group id="2">
         <setting id="signin" type="action" label="30016" help="30017">
@@ -41,11 +20,7 @@
           <data>RunPlugin(plugin://plugin.video.yt/signin)</data>
           <dependencies>
             <dependency type="enable">
-              <and>
-                <condition setting="client_id" operator="!is"></condition>
-                <condition setting="client_secret" operator="!is"></condition>
-                <condition setting="signed_in">false</condition>
-              </and>
+              <condition setting="signed_in">false</condition>
             </dependency>
           </dependencies>
           <control type="button" format="action">

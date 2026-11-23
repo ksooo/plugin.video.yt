@@ -24,8 +24,6 @@ ADDON_ICON = ADDON.getAddonInfo('icon')
 
 # Setting identifiers, must match resources/settings.xml.
 SETTING_API_KEY = 'api_key'
-SETTING_CLIENT_ID = 'client_id'
-SETTING_CLIENT_SECRET = 'client_secret'
 SETTING_SIGNED_IN = 'signed_in'
 SETTING_VIDEO_CODECS = 'video_codecs'
 SETTING_OFFER_AUTO_DUBS = 'offer_auto_dubs'

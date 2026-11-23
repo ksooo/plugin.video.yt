@@ -88,18 +88,28 @@ Google Cloud project, which is free:
 1. In the [Google Cloud Console](https://console.cloud.google.com/), create a project and enable
    the **YouTube Data API v3** for it.
 2. Under **APIs & Services ▸ Credentials**, create an **API key**.
-3. Under **Google Auth Platform**, set up the consent screen. On **Audience**, publish the app
-   (**In production**). While it stays in **Testing**, Google lets a sign-in expire after seven
-   days. Publishing asks for a home page and a privacy policy URL on the **Branding** page. A
-   Google Workspace account can choose the user type **Internal** instead and skip all that.
-4. Under **Clients**, create an OAuth client of the type **TVs and Limited Input devices**.
-5. In the add-on settings, under **Account**, enter the API key, the client ID and the client
-   secret, then choose **Sign in**.
+3. In the add-on settings, under **Account**, enter the API key.
 
-Signing in takes two codes, entered one after the other on a phone or computer. The first grants
-your own OAuth client access to the account. The second grants it to YouTube's app for Meta Quest,
-whose identity the add-on uses for your recommendations and history and to play age-restricted
-videos. **Sign out** revokes both.
+The add-on asks the YouTube Data API with the API key for:
+
+* The details of every video it lists - title, description, duration, date and time of
+  publication, numbers of views and likes, picture - in every folder, also where the videos
+  themselves come from the account or from YouTube's live page.
+* **Trending**, YouTube's categories and their most popular videos.
+* **Search**, and the videos of a channel.
+
+The project's quota is 10,000 units a day. A search costs 101 of them, most other listings 2 to 4.
+Once the quota is used up, listings fail until midnight Pacific Time, and the add-on names the time.
+
+Without an API key, the add-on lists no videos at all: trending, live and search are not offered,
+and the folders of a signed-in account only report that an API key is needed. Signing in and out
+works without it, and so does playing a video by its URL,
+`plugin://plugin.video.yt/play/?v=<video id>`.
+
+For your subscriptions, recommendations, history and likes, choose **Sign in** as well and enter
+the code it shows on a phone or computer. That grants YouTube's app for Meta Quest access to your
+account, whose identity the add-on uses for everything concerning the account and to play
+age-restricted videos. **Sign out** revokes it.
 
 ## Trademark
 

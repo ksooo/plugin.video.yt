@@ -17,7 +17,7 @@ from resources.lib import addon
 from resources.lib import dataapi
 from resources.lib import search
 
-AUTH = dataapi.Auth('access-user', '')
+AUTH = dataapi.Auth('key-1')
 
 VIDEO = dataapi.Video('v1', 'Title', 'About', 'UC1', 'Channel', '2026-10-14T16:00:07Z', 253,
                       'https://i.ytimg.com/v1/max.jpg', ['a'])

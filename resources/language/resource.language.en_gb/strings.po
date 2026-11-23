@@ -48,27 +48,7 @@ msgstr ""
 
 # settings help
 msgctxt "#30011"
-msgid "Key for the YouTube Data API from your own Google Cloud project."
-msgstr ""
-
-# settings label
-msgctxt "#30012"
-msgid "Client ID"
-msgstr ""
-
-# settings help
-msgctxt "#30013"
-msgid "ID of the OAuth client of the type \"TVs and Limited Input devices\" from your own Google Cloud project."
-msgstr ""
-
-# settings label
-msgctxt "#30014"
-msgid "Client secret"
-msgstr ""
-
-# settings help
-msgctxt "#30015"
-msgid "Secret of that OAuth client."
+msgid "Key for the YouTube Data API from your own Google Cloud project, which is free. In the Google Cloud Console (console.cloud.google.com), create a project, enable the YouTube Data API v3 for it and create an API key under APIs & Services > Credentials."
 msgstr ""
 
 # settings label
@@ -78,7 +58,7 @@ msgstr ""
 
 # settings help
 msgctxt "#30017"
-msgid "Sign in to YouTube on another device with a code. Needs client ID and client secret."
+msgid "Sign in to YouTube on another device with a code."
 msgstr ""
 
 # settings label
@@ -186,24 +166,14 @@ msgctxt "#30108"
 msgid "This live stream starts on {0} at {1}."
 msgstr ""
 
-# sign-in dialogue heading, {0} = step, {1} = number of steps
-msgctxt "#30110"
-msgid "Sign in ({0} of {1})"
-msgstr ""
-
 # sign-in dialogue, {0} = web address, {1} = code
 msgctxt "#30111"
 msgid "On a phone or computer, go to [B]{0}[/B] and enter the code [B]{1}[/B]."
 msgstr ""
 
-# sign-in dialogue, purpose of step 1
-msgctxt "#30112"
-msgid "This grants access to your subscriptions."
-msgstr ""
-
-# sign-in dialogue, purpose of step 2
+# sign-in dialogue, what the access is for
 msgctxt "#30113"
-msgid "This grants YouTube's app for Meta Quest access, which fetches recommendations and history and plays age-restricted videos."
+msgid "The add-on signs in as YouTube's app for Meta Quest. That is how it reaches the account and plays age-restricted videos."
 msgstr ""
 
 # sign-in dialogue, while the code is requested
