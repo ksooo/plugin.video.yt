@@ -170,39 +170,6 @@ class SubscribeTest(DataApiTestCase):
             dataapi.subscribe('UC1', auth=USER)
 
 
-class LikedVideosTest(DataApiTestCase):
-
-    def test_the_videos_rated_like_are_asked_for(self):
-        self.responses['videos'] = [{'items': [video('v1'), video('v2')]}]
-        videos = dataapi.liked_videos(100, auth=USER)
-        self.assertEqual([video.video_id for video in videos], ['v1', 'v2'])
-        self.assertEqual(self.requested('videos'), [{
-            'part': 'snippet,contentDetails,statistics', 'myRating': 'like', 'maxResults': '50'}])
-
-
-class RatingTest(DataApiTestCase):
-
-    def test_the_ratings_are_asked_for_fifty_videos_at_a_time(self):
-        video_ids = ['v{}'.format(number) for number in range(51)]
-        self.responses['getRating'] = [
-            {'items': [{'videoId': 'v0', 'rating': 'like'}, {'videoId': 'v1', 'rating': 'none'}]},
-            {'items': [{'videoId': 'v50', 'rating': 'dislike'}]}]
-        self.assertEqual(dataapi.ratings(video_ids, auth=USER),
-                         {'v0': 'like', 'v1': 'none', 'v50': 'dislike'})
-        self.assertCountEqual(self.requested('getRating'),
-                              [{'id': ','.join(video_ids[:50])}, {'id': 'v50'}])
-
-    def test_no_videos_ask_for_nothing(self):
-        self.assertEqual(dataapi.ratings([], auth=USER), {})
-        self.assertEqual(self.requests, [])
-
-    def test_rating_posts_the_video_and_its_rating(self):
-        self.responses['rate'] = [{}]
-        dataapi.rate('v1', 'like', auth=USER)
-        self.assertEqual(self.methods, [('POST', None)])
-        self.assertEqual(self.requested('rate'), [{'id': 'v1', 'rating': 'like'}])
-
-
 class ChannelVideosTest(DataApiTestCase):
 
     def test_the_videos_tab_playlist_is_read(self):
@@ -361,7 +328,6 @@ class PagesTest(DataApiTestCase):
 
     def test_the_pages_are_asked_for_at_once(self):
         video_ids = ['v{}'.format(number) for number in range(51)]
-        self.responses['getRating'] = [{'items': []}, {'items': []}]
         both_pages = threading.Barrier(2, timeout=1)
         answer = self._request_json
 
@@ -371,4 +337,3 @@ class PagesTest(DataApiTestCase):
 
         with mock.patch.object(dataapi.http, 'request_json', request_json):
             dataapi.videos(video_ids, auth=USER)
-            dataapi.ratings(video_ids, auth=USER)

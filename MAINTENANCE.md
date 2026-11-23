@@ -34,7 +34,8 @@ of the playlists would cost no quota, but they answer unreliably: the same
 feed comes at times with its videos, at times as HTTP 404 or 500. The folder
 is kept on top of the channels with the `SpecialSort` property.
 
-The likes come from `videos.list` with `myRating=like`, details included.
+The likes come from InnerTube, the account's playlist `LL` browsed as the
+Quest app, a page of 20 after the other; the details from the Data API.
 
 Kodi starts a listing with its first sort method. A channel and "All
 subscriptions" start with "Date", which Kodi starts newest first; the
@@ -114,9 +115,14 @@ subscription, the two share a submenu named after the channel. Kodi's
 
 ### Likes in context menus
 
-Every video offers to like it or to take the like back, so a video listing
-asks for the account's ratings of its videos when signed in. They are not
-cached; a listing is refreshed after a change, as for the subscriptions.
+Every video offers to like it or to take the like back, so every video
+listing needs to know the account's likes. `likes.py` keeps all of them,
+the ids of the playlist `LL`, in the profile directory. Liking and taking a
+like back go to InnerTube's `like/like` and `like/removelike` as the Quest
+app. Listing the likes, liking and taking a like back update the cache,
+otherwise it is fetched again after an hour. Signing out deletes it along
+with the tokens. A listing is refreshed after a change, as for the
+subscriptions.
 
 ## YouTube Data API
 
@@ -124,9 +130,8 @@ cached; a listing is refreshed after a change, as for the subscriptions.
 10,000 units a day. Opening the subscriptions costs 1 unit per 50 channels,
 all subscriptions 1 unit per channel and 2 more, opening a channel 4 units,
 a category of trending videos 2, the likes 2, a search 101, subscribing or
-unsubscribing 50, liking or taking a like back 50. Signed in, a listing of
-videos costs 1 unit more per 50 videos for their ratings. Finding the
-trending categories costs one unit per category once a day.
+unsubscribing 50. Finding the trending categories costs one unit per
+category once a day.
 
 A video costs the same whichever parts of it are asked for, so the listings
 take its `statistics` too: the numbers of views and likes head its plot,
@@ -158,8 +163,8 @@ refuses to renew a token - the user revoked the access, or changed the client
 in the settings - the add-on signs out and says so.
 
 Signing out also forgets what is kept of the account besides the tokens: the
-subscriptions, and the recommendations and watch progress in Kodi's temp
-directory, so another account signing in does not see them.
+subscriptions and likes, and the recommendations and watch progress in
+Kodi's temp directory, so another account signing in does not see them.
 
 ## Playback
 

@@ -40,6 +40,7 @@ SHELVES = [innertube.Shelf('Empfohlen', ['r1', 'r2']),
            innertube.Shelf('Kürzlich hochgeladen', ['r3'])]
 
 SUBSCRIPTIONS_CACHE = os.path.join(support.PROFILE_DIR, 'subscriptions.json')
+LIKES_CACHE = os.path.join(support.PROFILE_DIR, 'likes.json')
 
 LIKE = ('L30700', 'RunPlugin(plugin://plugin.video.yt/rate/?rating=like&v=dQw4w9WgXcQ)')
 
@@ -56,8 +57,7 @@ class BrowseTestCase(AddonTestCase):
                         'most_popular': [VIDEO], 'search': [VIDEO], 'videos': [VIDEO],
                         'video_categories': [dataapi.Category('10', 'Musik'),
                                              dataapi.Category('20', 'Gaming')],
-                        'subscribe': 'sub-new', 'unsubscribe': None,
-                        'ratings': {}, 'rate': None, 'liked_videos': [VIDEO]}
+                        'subscribe': 'sub-new', 'unsubscribe': None}
         self.failure = None
         for name in self.results:
             patcher = mock.patch.object(dataapi, name, self._query(name))
@@ -70,9 +70,18 @@ class BrowseTestCase(AddonTestCase):
         # How far the videos in the account's history were watched, or an
         # exception asking for it raises.
         self.progress = {}
+        # The videos the account liked, the tokens they were asked for with,
+        # and the likes given and taken back.
+        self.liked = []
+        self.likes_asked = []
+        self.likings = []
         for patcher in (mock.patch.object(innertube, 'get_shelves', self._get_shelves),
                         mock.patch.object(innertube, 'get_watch_progress',
-                                          self._get_watch_progress)):
+                                          self._get_watch_progress),
+                        mock.patch.object(innertube, 'get_liked_video_ids',
+                                          self._get_liked_video_ids),
+                        mock.patch.object(innertube, 'like', self._liking('like')),
+                        mock.patch.object(innertube, 'remove_like', self._liking('remove'))):
             patcher.start()
             self.addCleanup(patcher.stop)
 
@@ -85,6 +94,17 @@ class BrowseTestCase(AddonTestCase):
         if isinstance(self.progress, Exception):
             raise self.progress
         return self.progress
+
+    def _get_liked_video_ids(self, language, region, access_token):
+        self.likes_asked.append(access_token)
+        return list(self.liked)
+
+    def _liking(self, name):
+        def liking(video_id, language, region, access_token):
+            if self.failure is not None:
+                raise self.failure
+            self.likings.append((name, video_id, access_token))
+        return liking
 
     def _query(self, name):
         def query(*args, auth):
@@ -102,6 +122,17 @@ class BrowseTestCase(AddonTestCase):
         os.makedirs(support.PROFILE_DIR, exist_ok=True)
         with open(SUBSCRIPTIONS_CACHE, 'w', encoding='utf-8') as cache_file:
             json.dump({'saved_at': time.time() - age, 'channels': ids}, cache_file)
+
+    @staticmethod
+    def cache_likes(video_ids, age=0):
+        os.makedirs(support.PROFILE_DIR, exist_ok=True)
+        with open(LIKES_CACHE, 'w', encoding='utf-8') as cache_file:
+            json.dump({'saved_at': time.time() - age, 'videos': video_ids}, cache_file)
+
+    @staticmethod
+    def cached_likes():
+        with open(LIKES_CACHE, encoding='utf-8') as cache_file:
+            return json.load(cache_file)['videos']
 
     @staticmethod
     def cached_channels():
@@ -490,10 +521,23 @@ class HistoryTest(BrowseTestCase):
 class LikesTest(BrowseTestCase):
 
     def test_the_liked_videos_are_listed(self):
+        self.liked = ['dQw4w9WgXcQ']
         items = self.dispatch('likes')
-        self.assertEqual(self.queried('liked_videos'), [(100,)])
+        self.assertEqual(self.likes_asked, ['access-vr'])
+        self.assertEqual(self.queried('videos'), [(['dQw4w9WgXcQ'],)])
         self.assertEqual(self.urls(items), ['plugin://plugin.video.yt/play/?v=dQw4w9WgXcQ'])
         self.assertEqual(support.PLUGIN_STATE['category'], 'L30704')
+
+    def test_at_most_a_hundred_are_listed(self):
+        self.liked = ['v{}'.format(number) for number in range(150)]
+        self.dispatch('likes')
+        self.assertEqual(self.queried('videos'), [(self.liked[:100],)])
+
+    def test_listing_them_brings_the_cache_up_to_date(self):
+        self.cache_likes(['old'])
+        self.liked = ['dQw4w9WgXcQ']
+        self.dispatch('likes')
+        self.assertEqual(self.cached_likes(), ['dQw4w9WgXcQ'])
 
     def test_without_sign_in_the_user_is_told(self):
         self.sign_out(api_key='key-1')
@@ -809,40 +853,66 @@ class RatingTest(BrowseTestCase):
         support.reset_output()
         Router([support.BASE_URL + 'rate/', '-1', '?rating={}&v=v1'.format(rating)]).dispatch()
 
-    def test_the_ratings_of_the_listed_videos_are_asked_for(self):
+    def test_the_likes_of_the_account_are_asked_for(self):
         self.category()
-        self.assertEqual(self.queried('ratings'), [(['dQw4w9WgXcQ'],)])
+        self.assertEqual(self.likes_asked, ['access-vr'])
 
     def test_a_video_not_liked_offers_liking(self):
-        self.results['ratings'] = {'dQw4w9WgXcQ': 'dislike'}
         self.assertEqual(self.category()[0][1].context_menu[-1], LIKE)
 
     def test_a_liked_video_offers_taking_the_like_back(self):
-        self.results['ratings'] = {'dQw4w9WgXcQ': 'like'}
+        self.liked = ['dQw4w9WgXcQ']
         self.assertEqual(self.category()[0][1].context_menu[-1], (
             'L30701', 'RunPlugin(plugin://plugin.video.yt/rate/?rating=none&v=dQw4w9WgXcQ)'))
 
     def test_a_channels_videos_know_their_rating_too(self):
-        self.results['ratings'] = {'dQw4w9WgXcQ': 'like'}
+        self.liked = ['dQw4w9WgXcQ']
         list_item = self.dispatch('channel', '?id=UC1&title=Alpha')[0][1]
         self.assertEqual(list_item.context_menu[-1][0], 'L30701')
 
+    def test_the_likes_are_taken_from_the_cache_for_an_hour(self):
+        self.cache_likes(['dQw4w9WgXcQ'], age=3500)
+        self.assertEqual(self.category()[0][1].context_menu[-1][0], 'L30701')
+        self.assertEqual(self.likes_asked, [])
+
+    def test_after_an_hour_the_likes_are_fetched_anew(self):
+        self.cache_likes(['dQw4w9WgXcQ'], age=3700)
+        self.assertEqual(self.category()[0][1].context_menu[-1], LIKE)
+        self.assertEqual(self.likes_asked, ['access-vr'])
+
+    def test_without_sign_in_nothing_is_offered(self):
+        self.sign_out(api_key='key-1')
+        self.assertNotIn(LIKE, self.category()[0][1].context_menu)
+        self.assertEqual(self.likes_asked, [])
+
     def test_liking_is_reported_and_the_listing_refreshed(self):
+        self.cache_likes(['v2'])
         self.act('like')
-        self.assertEqual(self.queried('rate'), [('v1', 'like')])
+        self.assertEqual(self.likings, [('like', 'v1', 'access-vr')])
+        self.assertEqual(self.cached_likes(), ['v1', 'v2'])
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30702')])
         self.assertEqual(support.BUILTINS, ['Container.Refresh'])
 
-    def test_taking_the_like_back_rates_the_video_none(self):
+    def test_taking_the_like_back_is_reported_too(self):
+        self.cache_likes(['v2', 'v1'])
         self.act('none')
-        self.assertEqual(self.queried('rate'), [('v1', 'none')])
+        self.assertEqual(self.likings, [('remove', 'v1', 'access-vr')])
+        self.assertEqual(self.cached_likes(), ['v2'])
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30703')])
 
     def test_a_failed_rating_is_reported_without_refreshing(self):
-        self.failure = dataapi.DataApiError('forbidden')
+        self.cache_likes([])
+        self.failure = http.RequestError('timed out')
         self.act('like')
-        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30103')])
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30101')])
         self.assertEqual(support.BUILTINS, [])
+        self.assertEqual(self.cached_likes(), [])
+
+    def test_without_sign_in_the_user_is_told(self):
+        self.sign_out(api_key='key-1')
+        self.act('like')
+        self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30105')])
+        self.assertEqual(self.likings, [])
 
 
 class FailureTest(BrowseTestCase):

@@ -127,13 +127,16 @@ class SignOutTest(AccountTestCase):
         self.assertFalse(support.SETTINGS['signed_in'])
         self.assertEqual(support.NOTIFICATIONS, [('YouTube', 'L30121')])
 
-    def test_the_cached_subscriptions_go_too(self):
+    def test_the_cached_subscriptions_and_likes_go_too(self):
         support.store_tokens(user=tokens('user'), vr=tokens('vr'))
-        cache = os.path.join(support.PROFILE_DIR, account.SUBSCRIPTIONS_FILE)
-        with open(cache, 'w', encoding='utf-8') as cache_file:
-            cache_file.write('{}')
+        caches = [os.path.join(support.PROFILE_DIR, file_name)
+                  for file_name in (account.SUBSCRIPTIONS_FILE, account.LIKES_FILE)]
+        for cache in caches:
+            with open(cache, 'w', encoding='utf-8') as cache_file:
+                cache_file.write('{}')
         self.dispatch('signout')
-        self.assertFalse(os.path.exists(cache))
+        for cache in caches:
+            self.assertFalse(os.path.exists(cache))
 
     def test_the_kept_feeds_of_the_account_go_too(self):
         support.store_tokens(user=tokens('user'), vr=tokens('vr'))

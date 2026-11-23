@@ -23,10 +23,14 @@ from . import http
 PLAYER_URL = 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false'
 BROWSE_URL = 'https://www.youtube.com/youtubei/v1/browse?prettyPrint=false'
 FEEDBACK_URL = 'https://www.youtube.com/youtubei/v1/feedback?prettyPrint=false'
+LIKE_URL = 'https://www.youtube.com/youtubei/v1/like/like?prettyPrint=false'
+REMOVE_LIKE_URL = 'https://www.youtube.com/youtubei/v1/like/removelike?prettyPrint=false'
 
 #: Browse ids of the account's feeds.
 RECOMMENDATIONS = 'FEwhat_to_watch'
 HISTORY = 'FEhistory'
+#: The playlist of the videos the account liked.
+LIKED_VIDEOS = 'VLLL'
 
 #: YouTube's live channel, and the params of its tabs of the streams live now,
 #: upcoming and recently ended.
@@ -211,12 +215,41 @@ def remove_from_history(video_id, language, region, access_token):
     if not tokens:
         return False
 
-    client = ANDROID_VR
-    http.post_json(FEEDBACK_URL, {
-        'context': {'client': _context(client, language, region)},
-        'feedbackTokens': tokens,
-    }, dict(client.api_headers, Authorization='Bearer ' + access_token))
+    _post_signed_in(FEEDBACK_URL, {'feedbackTokens': tokens}, language, region, access_token)
     return True
+
+
+def get_liked_video_ids(language, region, access_token):
+    """Return the ids of all videos the account liked, the latest like first.
+
+    YouTube hands them out a page of 20 after the other. access_token is the
+    token of the account ANDROID_VR accepts.
+    """
+    video_ids = []
+    fields = {'browseId': LIKED_VIDEOS}
+    while True:
+        response = _post_signed_in(BROWSE_URL, fields, language, region, access_token)
+        for video in _renderers(response, 'playlistVideoRenderer'):
+            if 'videoId' in video and video['videoId'] not in video_ids:
+                video_ids.append(video['videoId'])
+        continuation = next((data.get('continuation')
+                             for data in _renderers(response, 'nextContinuationData')), None)
+        if not continuation:
+            return video_ids
+        fields = {'continuation': continuation}
+
+
+def like(video_id, language, region, access_token):
+    """Like the video. access_token is the token of the account ANDROID_VR accepts."""
+    _post_signed_in(LIKE_URL, {'target': {'videoId': video_id}}, language, region,
+                    access_token)
+
+
+def remove_like(video_id, language, region, access_token):
+    """Take back the like of the video. access_token is the token of the account
+    ANDROID_VR accepts."""
+    _post_signed_in(REMOVE_LIKE_URL, {'target': {'videoId': video_id}}, language, region,
+                    access_token)
 
 
 def get_signed_in_player(video_id, language, region, access_token):
@@ -255,12 +288,8 @@ def new_cpn():
 
 def _browse(browse_id, language, region, access_token):
     """Return the sections of the first page of one of the signed-in account's feeds."""
-    client = ANDROID_VR
-    headers = dict(client.api_headers, Authorization='Bearer ' + access_token)
-    response = http.post_json(BROWSE_URL, {
-        'context': {'client': _context(client, language, region)},
-        'browseId': browse_id,
-    }, headers)
+    response = _post_signed_in(BROWSE_URL, {'browseId': browse_id}, language, region,
+                               access_token)
 
     sections = []
     for tab in response.get('contents', {}).get('singleColumnBrowseResultsRenderer', {}).get(
@@ -268,6 +297,14 @@ def _browse(browse_id, language, region, access_token):
         sections.extend(tab.get('tabRenderer', {}).get('content', {}).get(
             'sectionListRenderer', {}).get('contents', []))
     return sections
+
+
+def _post_signed_in(url, fields, language, region, access_token):
+    """Post the fields to InnerTube as ANDROID_VR on behalf of the signed-in account."""
+    client = ANDROID_VR
+    return http.post_json(url, dict(fields, context={'client': _context(client, language,
+                                                                          region)}),
+                          dict(client.api_headers, Authorization='Bearer ' + access_token))
 
 
 def _renderers(node, name):

@@ -27,6 +27,7 @@ from . import dataapi
 from . import feeds
 from . import http
 from . import innertube
+from . import likes
 from . import listing
 from . import playback
 from . import search
@@ -112,7 +113,7 @@ class Router:
             if auth.token:
                 subscribed = channel_id in subscriptions.subscription_ids(auth)
             videos = dataapi.channel_videos(channel_id, VIDEO_COUNT, auth=auth)
-            return videos, subscribed, self._likes(videos, auth)
+            return videos, subscribed, self._likes(videos)
 
         result, progress = self._query_with_watch_progress(query)
         if result is None:
@@ -171,8 +172,12 @@ class Router:
                           addon.localize(30401), need_account=True)
 
     def _list_likes(self):
-        """Show the videos the account liked."""
-        self._list_videos(lambda auth: dataapi.liked_videos(VIDEO_COUNT, auth=auth),
+        """Show the videos the account liked, the latest like first."""
+        access_token = self._feed_token()
+        if access_token is None:
+            return
+        self._list_videos(lambda auth: dataapi.videos(likes.list_ids(access_token)[:VIDEO_COUNT],
+                                                      auth=auth),
                           addon.localize(30704), need_account=True)
 
     def _feed_token(self):
@@ -264,7 +269,7 @@ class Router:
         def videos_and_account(auth):
             ids = subscriptions.subscription_ids(auth) if auth.token else None
             videos = query(auth)
-            return videos, ids, self._likes(videos, auth)
+            return videos, ids, self._likes(videos)
 
         result, progress = self._query_with_watch_progress(videos_and_account,
                                                            need_account=need_account)
@@ -286,12 +291,13 @@ class Router:
                               category, by_date=by_date)
 
     @staticmethod
-    def _likes(videos, auth):
+    def _likes(videos):
         """Return whether the account liked each of the videos by id, empty if not signed in."""
-        if not auth.token:
+        access_token = account.access_token(account.VR)
+        if access_token is None:
             return {}
-        ratings = dataapi.ratings([video.video_id for video in videos], auth=auth)
-        return {video.video_id: ratings.get(video.video_id) == 'like' for video in videos}
+        liked = set(likes.liked_ids(access_token))
+        return {video.video_id: video.video_id in liked for video in videos}
 
     def _query_with_watch_progress(self, query, need_account=False):
         """Return what _query_data_api() returns for query, and the watch progress."""
@@ -377,9 +383,13 @@ class Router:
     def _rate(self):
         """Like a video or take the like back, run from a context menu. Parameters: v, rating."""
         like = self._params.get('rating') == 'like'
+        access_token = account.access_token(account.VR)
+        if access_token is None:
+            self._fail(addon.localize(30105), listing_route=False)
+            return
 
         def rated(auth):
-            dataapi.rate(self._params.get('v', ''), 'like' if like else 'none', auth=auth)
+            (likes.like if like else likes.remove_like)(self._params.get('v', ''), access_token)
             return True
 
         if self._query_data_api(rated, need_account=True, listing_route=False):

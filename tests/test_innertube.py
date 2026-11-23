@@ -332,6 +332,57 @@ class RemoveFromHistoryTest(BrowseTestCase):
         self.assertEqual(len(self.requests), 1)
 
 
+def liked_page(video_ids, continuation=None):
+    renderer = {'contents': [{'playlistVideoRenderer': {'videoId': video_id}}
+                             for video_id in video_ids]}
+    if continuation:
+        renderer['continuations'] = [{'nextContinuationData': {'continuation': continuation}}]
+    return renderer
+
+
+class LikedVideosTest(BrowseTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.pages = [
+            browse_response({'playlistVideoListRenderer': liked_page(['v1', 'v2'], 'page-2')}),
+            {'continuationContents': {'playlistVideoListContinuation': liked_page(['v3'])}}]
+
+    def _post_json(self, url, payload, headers):
+        self.requests.append((url, payload, headers))
+        return self.pages.pop(0)
+
+    def test_all_pages_are_collected(self):
+        self.assertEqual(innertube.get_liked_video_ids('de', 'DE', 'access-vr'),
+                         ['v1', 'v2', 'v3'])
+
+    def test_the_pages_are_asked_for_one_after_the_other_as_the_signed_in_vr_app(self):
+        innertube.get_liked_video_ids('de', 'DE', 'access-vr')
+        self.assertEqual([payload.get('browseId') or payload['continuation']
+                          for _, payload, _ in self.requests], ['VLLL', 'page-2'])
+        for url, payload, headers in self.requests:
+            self.assertEqual(url, innertube.BROWSE_URL)
+            self.assertEqual(payload['context']['client']['clientName'], 'ANDROID_VR')
+            self.assertEqual(headers['Authorization'], 'Bearer access-vr')
+
+
+class LikeTest(BrowseTestCase):
+
+    def test_liking_posts_the_video_as_the_signed_in_vr_app(self):
+        innertube.like('v1', 'de', 'DE', 'access-vr')
+        url, payload, headers = self.requests[0]
+        self.assertEqual(url, innertube.LIKE_URL)
+        self.assertEqual(payload['target'], {'videoId': 'v1'})
+        self.assertEqual(payload['context']['client']['clientName'], 'ANDROID_VR')
+        self.assertEqual(headers['Authorization'], 'Bearer access-vr')
+
+    def test_taking_the_like_back_posts_the_video_to_its_own_url(self):
+        innertube.remove_like('v1', 'de', 'DE', 'access-vr')
+        url, payload, _ = self.requests[0]
+        self.assertEqual(url, innertube.REMOVE_LIKE_URL)
+        self.assertEqual(payload['target'], {'videoId': 'v1'})
+
+
 def web_video(video_id):
     return {'richItemRenderer': {'content': {'videoRenderer': {
         'videoId': video_id, 'title': {'runs': [{'text': 'Stream ' + video_id}]}}}}}
